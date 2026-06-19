@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { produtosDefault } from "@/lib/produtos";
+import { getProdutos as getStoredProdutos } from "@/lib/storage";
 import type { Produto } from "@/lib/produtos";
 
 function parsePreco(preco: string) {
@@ -55,16 +56,21 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
             return;
         }
 
+        const fallbackProduto = () => {
+            const produtosSalvos = getStoredProdutos();
+            return produtosSalvos.find((item) => item.id === id) ?? produtosDefault.find((item) => item.id === id) ?? null;
+        };
+
         fetch(`/api/produtos?id=${id}`)
             .then(async (response) => {
                 if (!response.ok) {
-                    return produtosDefault.find((item) => item.id === id) ?? null;
+                    return fallbackProduto();
                 }
                 return response.json();
             })
             .then((data) => setProduto(data))
             .catch(() => {
-                setProduto(produtosDefault.find((item) => item.id === id) ?? null);
+                setProduto(fallbackProduto());
             });
     }, [params.id]);
 
