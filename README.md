@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bella Fashion Web
 
-## Getting Started
+Loja Next.js com checkout, pedidos automáticos em banco (Prisma), Stripe e notificações automáticas.
 
-First, run the development server:
+## Estado atual (pronto para vender)
+
+- Pedidos automáticos: ativo.
+- Atualização de estoque automática: ativa.
+- Checkout Stripe com sessão de pagamento: ativo.
+- Confirmação automática de pagamento via webhook Stripe: ativa.
+- Notificação automática por e-mail (SMTP): ativa quando variáveis SMTP estão preenchidas.
+- Notificação automática por WhatsApp Cloud API: ativa quando token e phone number ID estão preenchidos.
+- Painel administrativo protegido por autenticação básica: ativo quando ADMIN_USER e ADMIN_PASSWORD estão preenchidos.
+
+## Executar localmente
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Configuração de produção (3 pontos, um por um)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1) Gmail automático (pedido criado e pagamento confirmado)
 
-## Learn More
+Preencha no `.env`:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="janierstivenrodrigueslondono@gmail.com"
+SMTP_PASS="SUA_APP_PASSWORD_GMAIL"
+COMPANY_EMAIL="janierstivenrodrigueslondono@gmail.com"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Observação:
+- Para Gmail, use App Password (não a senha normal).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 2) Stripe com confirmação automática de pagamento
 
-## Deploy on Vercel
+Preencha no `.env`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```env
+STRIPE_SECRET_KEY="sk_live_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+NEXT_PUBLIC_APP_URL="https://seu-dominio.com"
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+No painel Stripe:
+- Endpoint webhook: `https://seu-dominio.com/api/stripe/webhook`
+- Evento obrigatório: `checkout.session.completed`
+
+Resultado:
+- Quando o cliente paga, o pedido é atualizado automaticamente para:
+	- `statusPagamento = Pago`
+	- `statusPedido = Pagamento confirmado`
+
+### 3) WhatsApp automático (empresa Bella Fashion)
+
+Preencha no `.env`:
+
+```env
+COMPANY_WHATSAPP="11940625832"
+WHATSAPP_PHONE_NUMBER_ID="..."
+WHATSAPP_CLOUD_TOKEN="..."
+```
+
+Resultado:
+- Mensagem automática para o WhatsApp da empresa quando pedido é criado.
+- Mensagem automática para o WhatsApp da empresa quando pagamento é confirmado.
+
+### 4) Segurança do painel admin
+
+Preencha no `.env`:
+
+```env
+ADMIN_USER="seu_usuario_forte"
+ADMIN_PASSWORD="sua_senha_forte"
+```
+
+Resultado:
+- Rotas `/admin/*` exigem login.
+- Alterações em produtos e pedidos (PUT/DELETE) exigem login.
+
+### 5) Compliance mínimo para venda
+
+- Política de Privacidade publicada em `/politica-privacidade`.
+- Termos de Uso publicados em `/termos`.
+- Links disponíveis no rodapé do site.
+
+## Observação de segurança
+
+Nenhum sistema é 100% inviolável, mas este projeto já está com hardening base de produção:
+- Headers de segurança HTTP (CSP, HSTS, X-Frame-Options, etc.).
+- Webhook Stripe com validação de assinatura.
+- Validação de payload com Zod nos endpoints críticos.
+- Controle de acesso ao painel administrativo.
+
+## Variáveis de ambiente completas
+
+Use `.env.example` como base.
+
+## Verificação final antes de publicar
+
+```bash
+npm run build
+```
+
+Se o build passar, a aplicação está pronta para deploy.
