@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { produtosDefault } from "@/lib/produtos";
 import type { Produto } from "@/lib/produtos";
 
 function parsePreco(preco: string) {
@@ -57,12 +58,14 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
         fetch(`/api/produtos?id=${id}`)
             .then(async (response) => {
                 if (!response.ok) {
-                    throw new Error("Produto não encontrado.");
+                    return produtosDefault.find((item) => item.id === id) ?? null;
                 }
                 return response.json();
             })
             .then((data) => setProduto(data))
-            .catch(() => setProduto(null));
+            .catch(() => {
+                setProduto(produtosDefault.find((item) => item.id === id) ?? null);
+            });
     }, [params.id]);
 
     const quantidadeNumero = Number(quantidade);
