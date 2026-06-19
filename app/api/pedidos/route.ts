@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { pedidoCreateSchema, pedidoUpdateSchema } from "@/lib/schemas";
 import { sendOrderCreatedNotifications } from "@/lib/notifications";
 
+export const dynamic = "force-dynamic";
+
 function parsePriceToNumber(value: string) {
     const normalized = value
         .replace(/[^\d,.-]/g, "")
