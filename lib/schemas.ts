@@ -3,9 +3,21 @@ import { z } from "zod";
 const whatsappRegex = /^\d{10,15}$/;
 const paymentMethodSchema = z.enum(["Pix", "Transferência", "Cartão", "Boleto"]);
 
+function isTempImageUrl(value: string) {
+    const normalized = value.trim().toLowerCase();
+    return normalized.startsWith("blob:") || normalized.startsWith("data:");
+}
+
+const persistedImageSchema = z
+    .string()
+    .min(1, "Informe o URL da imagem.")
+    .refine((value) => !isTempImageUrl(value), {
+        message: "A imagem deve ser URL persistente. blob: e data: não são permitidos.",
+    });
+
 export const produtoSchema = z.object({
     nome: z.string().min(1, "Informe o nome do produto."),
-    imagem: z.string().min(1, "Informe o URL da imagem."),
+    imagem: persistedImageSchema,
     preco: z.string().min(1, "Informe o preço do produto."),
     destaque: z.string().min(1, "Informe o destaque do produto."),
     descricao: z.string().min(1, "Informe a descrição do produto."),
@@ -77,7 +89,10 @@ const optionalTrimmedString = z
     });
 
 export const siteConfigSchema = z.object({
-    heroImagem: optionalTrimmedString,
+    heroImagem: optionalTrimmedString.refine(
+        (value) => !value || !isTempImageUrl(value),
+        "A imagem do Hero deve ser URL persistente. blob: e data: não são permitidos."
+    ),
     heroTitulo: optionalTrimmedString,
     heroSubtitulo: optionalTrimmedString,
     heroMaterial: optionalTrimmedString,

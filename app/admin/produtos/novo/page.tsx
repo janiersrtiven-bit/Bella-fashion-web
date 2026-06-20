@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ToastView, useToast } from "@/components/ui/toast";
+import { isInvalidImageValue, uploadImageToServer } from "@/lib/upload-client";
 
 type Produto = {
   id: number;
@@ -46,7 +47,8 @@ export default function NovoProdutoPage() {
   const [destaque, setDestaque] = useState("Novo");
   const [status, setStatus] = useState("Ativo");
   const [descricao, setDescricao] = useState("");
-  const [preview, setPreview] = useState<string | null>(null);
+  const [imagemUrl, setImagemUrl] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast, showToast, clearToast } = useToast();
@@ -69,13 +71,23 @@ export default function NovoProdutoPage() {
     });
   }
 
-  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
     if (!file) return;
 
-    const imageUrl = URL.createObjectURL(file);
-    setPreview(imageUrl);
+    try {
+      setIsUploadingImage(true);
+      const uploadedUrl = await uploadImageToServer(file);
+      setImagemUrl(uploadedUrl);
+      showToast("Imagem enviada com sucesso.", "success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Falha ao enviar imagem.";
+      showToast(message, "error");
+    } finally {
+      setIsUploadingImage(false);
+      event.currentTarget.value = "";
+    }
   }
 
   async function handleSave() {
@@ -107,8 +119,13 @@ export default function NovoProdutoPage() {
       return;
     }
 
-    if (!preview) {
-      showToast("Selecione uma foto do produto.", "error");
+    if (!imagemUrl.trim()) {
+      showToast("Selecione uma foto do produto ou informe uma URL manual.", "error");
+      return;
+    }
+
+    if (isInvalidImageValue(imagemUrl)) {
+      showToast("A imagem precisa ser persistente. blob: e data: não são permitidos.", "error");
       return;
     }
 
@@ -124,7 +141,7 @@ export default function NovoProdutoPage() {
       destaque,
       status,
       descricao: descricao.trim(),
-      imagem: preview,
+      imagem: imagemUrl.trim(),
       dataCadastro: "",
       horaCadastro: "",
     };
@@ -301,21 +318,38 @@ export default function NovoProdutoPage() {
                 Foto do produto
               </label>
 
+              <label className="mb-3 block text-sm text-gray-600">
+                URL manual (opcional)
+                <input
+                  type="text"
+                  value={imagemUrl}
+                  onChange={(event) => setImagemUrl(event.target.value)}
+                  placeholder="https://... ou /produtos/minha-imagem.jpg"
+                  className="mt-2 w-full rounded-2xl border border-purple-100 px-4 py-3 outline-none transition focus:border-purple-700"
+                />
+              </label>
+
               <div className="rounded-3xl border-2 border-dashed border-purple-200 bg-purple-50 p-8 text-center">
-                {preview ? (
+                {imagemUrl ? (
                   <div className="mx-auto max-w-sm">
                     <div className="relative mx-auto h-96 overflow-hidden rounded-3xl bg-purple-100 shadow-sm">
-                      <Image
-                        src={normalizeImagePath(preview)}
-                        alt="Prévia do produto"
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
+                      {isInvalidImageValue(imagemUrl) ? (
+                        <div className="flex h-full items-center justify-center p-6 text-center text-sm text-red-600">
+                          URL inválida para salvar. Use upload real ou URL HTTP/caminho público.
+                        </div>
+                      ) : (
+                        <Image
+                          src={normalizeImagePath(imagemUrl)}
+                          alt="Prévia do produto"
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      )}
                     </div>
 
                     <p className="mt-4 font-semibold text-purple-950">
-                      Prévia da imagem selecionada
+                      Prévia da imagem atual
                     </p>
                   </div>
                 ) : (
@@ -334,8 +368,12 @@ export default function NovoProdutoPage() {
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
+                  disabled={isUploadingImage}
                   className="mt-5 rounded-full bg-white px-5 py-3 text-sm text-gray-600"
                 />
+                {isUploadingImage && (
+                  <p className="mt-3 text-sm text-purple-700">Enviando imagem para storage...</p>
+                )}
               </div>
             </div>
           </div>
@@ -353,7 +391,7 @@ export default function NovoProdutoPage() {
             <button
               type="button"
               onClick={handleSave}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploadingImage}
               className="rounded-full bg-purple-800 px-8 py-4 font-semibold text-white transition hover:bg-purple-900"
             >
               {isSubmitting ? "Salvando..." : "Salvar produto"}

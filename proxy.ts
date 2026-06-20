@@ -30,8 +30,13 @@ export async function proxy(request: NextRequest) {
         pathname.startsWith("/api/pedidos") && ["PUT", "DELETE"].includes(method);
     const isProtectedConfigMutation =
         pathname.startsWith("/api/configuracoes") && ["PUT", "POST", "DELETE", "PATCH"].includes(method);
+    const isProtectedUploadMutation =
+        pathname.startsWith("/api/upload") && ["POST", "PUT", "DELETE", "PATCH"].includes(method);
     const isProtectedApiMutation =
-        isProtectedProdutosMutation || isProtectedPedidosMutation || isProtectedConfigMutation;
+        isProtectedProdutosMutation ||
+        isProtectedPedidosMutation ||
+        isProtectedConfigMutation ||
+        isProtectedUploadMutation;
 
     if (isAdminLoginPath) {
         return NextResponse.next();
@@ -55,5 +60,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/admin/:path*", "/api/produtos/:path*", "/api/pedidos/:path*", "/api/configuracoes/:path*"],
+    matcher: [
+        "/admin/:path*",
+        "/api/produtos/:path*",
+        "/api/pedidos/:path*",
+        "/api/configuracoes/:path*",
+        "/api/upload/:path*",
+    ],
 };

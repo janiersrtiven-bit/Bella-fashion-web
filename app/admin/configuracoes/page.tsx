@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ToastView, useToast } from "@/components/ui/toast";
+import { isInvalidImageValue, uploadImageToServer } from "@/lib/upload-client";
 
 type SiteConfig = {
     heroImagem: string;
@@ -45,6 +46,7 @@ export default function ConfiguracoesAdminPage() {
     const [config, setConfig] = useState<SiteConfig>(initialConfig);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploadingHeroImage, setIsUploadingHeroImage] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const { toast, showToast, clearToast } = useToast();
 
@@ -89,8 +91,33 @@ export default function ConfiguracoesAdminPage() {
         }));
     }
 
+    async function handleHeroImageFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setIsUploadingHeroImage(true);
+            const uploadedUrl = await uploadImageToServer(file);
+            updateField("heroImagem", uploadedUrl);
+            showToast("Imagem do Hero enviada com sucesso.", "success");
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Falha ao enviar imagem.";
+            showToast(message, "error");
+        } finally {
+            setIsUploadingHeroImage(false);
+            event.currentTarget.value = "";
+        }
+    }
+
     async function handleSave(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
+
+        if (isInvalidImageValue(config.heroImagem)) {
+            const message = "A imagem do Hero deve ser URL persistente. blob: e data: não são permitidos.";
+            setErrorMessage(message);
+            showToast(message, "error");
+            return;
+        }
 
         setIsSaving(true);
         setErrorMessage(null);
@@ -182,6 +209,17 @@ export default function ConfiguracoesAdminPage() {
                                 <p className="mt-2 text-xs text-gray-500">
                                     Use URL completa ou caminho de arquivo em public/produtos.
                                 </p>
+
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                                    onChange={handleHeroImageFileChange}
+                                    disabled={isUploadingHeroImage}
+                                    className="mt-3 rounded-full bg-white px-5 py-3 text-sm text-gray-600"
+                                />
+                                {isUploadingHeroImage && (
+                                    <p className="mt-2 text-sm text-purple-700">Enviando imagem para storage...</p>
+                                )}
                             </label>
 
                             <label className="block">
@@ -256,7 +294,7 @@ export default function ConfiguracoesAdminPage() {
                         <div className="mt-8 flex justify-end">
                             <button
                                 type="submit"
-                                disabled={isSaving || isLoading}
+                                disabled={isSaving || isLoading || isUploadingHeroImage}
                                 className="rounded-full bg-purple-800 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-900 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {isSaving ? "Salvando..." : "Salvar configurações"}
@@ -273,7 +311,13 @@ export default function ConfiguracoesAdminPage() {
                         <div className="mt-6 rounded-3xl bg-purple-50 p-5">
                             <div className="relative h-64 overflow-hidden rounded-2xl bg-purple-100">
                                 {heroPreview ? (
-                                    <Image src={heroPreview} alt="Preview Hero" fill className="object-cover" unoptimized />
+                                    isInvalidImageValue(heroPreview) ? (
+                                        <div className="flex h-full items-center justify-center text-center text-sm text-red-600">
+                                            URL de imagem inválida (blob/data). Faça upload real ou use URL persistente.
+                                        </div>
+                                    ) : (
+                                        <Image src={heroPreview} alt="Preview Hero" fill className="object-cover" unoptimized />
+                                    )
                                 ) : (
                                     <div className="flex h-full items-center justify-center text-center text-sm text-purple-700">
                                         Sem imagem configurada
