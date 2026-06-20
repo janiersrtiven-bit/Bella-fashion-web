@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ToastView, useToast } from "@/components/ui/toast";
+import { toUserFacingError } from "@/lib/ui-error";
 import { isInvalidImageValue, uploadImageToServer } from "@/lib/upload-client";
 
 type Produto = {
@@ -82,7 +83,11 @@ export default function NovoProdutoPage() {
       setImagemUrl(uploadedUrl);
       showToast("Imagem enviada com sucesso.", "success");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Falha ao enviar imagem.";
+      const rawMessage = error instanceof Error ? error.message : "";
+      const message = toUserFacingError(
+        rawMessage,
+        "Nao foi possivel enviar a imagem agora. Tente novamente."
+      );
       showToast(message, "error");
     } finally {
       setIsUploadingImage(false);
@@ -166,7 +171,10 @@ export default function NovoProdutoPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        const message = data.error || "No se pudo guardar el producto.";
+        const message = toUserFacingError(
+          data?.error,
+          "Nao foi possivel salvar o produto. Tente novamente."
+        );
         setErrorMessage(message);
         showToast(message, "error");
         setIsSubmitting(false);
@@ -176,7 +184,7 @@ export default function NovoProdutoPage() {
       showToast("Produto salvo com sucesso!", "success");
       router.push("/admin/produtos");
     } catch {
-      const message = "No se pudo conectar con el servidor.";
+      const message = "Sem conexao com o servidor. Tente novamente.";
       setErrorMessage(message);
       showToast(message, "error");
       setIsSubmitting(false);

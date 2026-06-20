@@ -44,23 +44,47 @@ export function ToastView({ toast, onClose }: ToastViewProps) {
 
     const toneClass =
         toast.type === "success"
-            ? "border-green-200 bg-green-50 text-green-800"
+            ? "border-green-200 bg-green-50 text-green-900"
             : toast.type === "error"
-                ? "border-red-200 bg-red-50 text-red-800"
-                : "border-blue-200 bg-blue-50 text-blue-800";
+                ? "border-red-200 bg-red-50 text-red-900"
+                : "border-blue-200 bg-blue-50 text-blue-900";
+
+    const title =
+        toast.type === "success"
+            ? "Sucesso"
+            : toast.type === "error"
+                ? "Atencao"
+                : "Informacao";
+
+    const accentClass =
+        toast.type === "success"
+            ? "bg-green-600"
+            : toast.type === "error"
+                ? "bg-red-600"
+                : "bg-blue-600";
 
     return (
-        <div className="fixed right-6 top-6 z-[60] w-full max-w-sm">
-            <div className={`rounded-2xl border px-4 py-3 shadow-lg ${toneClass}`}>
-                <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-semibold">{toast.message}</p>
+        <div className="fixed right-4 top-4 z-[60] w-full max-w-sm px-2 sm:right-6 sm:top-6 sm:px-0">
+            <div
+                className={`overflow-hidden rounded-2xl border shadow-xl ring-1 ring-black/5 ${toneClass}`}
+                role="status"
+                aria-live="polite"
+            >
+                <div className="flex items-start justify-between gap-3 px-4 py-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                        <span className={`mt-1 block h-2.5 w-2.5 shrink-0 rounded-full ${accentClass}`} />
+                        <div className="min-w-0">
+                            <p className="text-xs font-bold uppercase tracking-[0.12em] opacity-80">{title}</p>
+                            <p className="mt-1 text-sm leading-5">{toast.message}</p>
+                        </div>
+                    </div>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="text-xs font-bold opacity-70 transition hover:opacity-100"
-                        aria-label="Fechar notificação"
+                        className="rounded-md px-2 py-1 text-xs font-semibold opacity-70 transition hover:bg-black/5 hover:opacity-100"
+                        aria-label="Fechar notificacao"
                     >
-                        X
+                        Fechar
                     </button>
                 </div>
             </div>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ToastView, useToast } from "@/components/ui/toast";
+import { toUserFacingError } from "@/lib/ui-error";
 import { isInvalidImageValue, uploadImageToServer } from "@/lib/upload-client";
 
 type SiteConfig = {
@@ -101,7 +102,11 @@ export default function ConfiguracoesAdminPage() {
             updateField("heroImagem", uploadedUrl);
             showToast("Imagem do Hero enviada com sucesso.", "success");
         } catch (error) {
-            const message = error instanceof Error ? error.message : "Falha ao enviar imagem.";
+            const rawMessage = error instanceof Error ? error.message : "";
+            const message = toUserFacingError(
+                rawMessage,
+                "Nao foi possivel enviar a imagem agora. Tente novamente."
+            );
             showToast(message, "error");
         } finally {
             setIsUploadingHeroImage(false);
@@ -133,7 +138,10 @@ export default function ConfiguracoesAdminPage() {
 
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                const message = data?.error || "Não foi possível salvar as configurações.";
+                const message = toUserFacingError(
+                    data?.error,
+                    "Nao foi possivel salvar as configuracoes. Tente novamente."
+                );
                 setErrorMessage(message);
                 showToast(message, "error");
                 setIsSaving(false);
@@ -152,7 +160,7 @@ export default function ConfiguracoesAdminPage() {
 
             showToast("Configurações do site salvas com sucesso.", "success");
         } catch {
-            const message = "Não foi possível conectar ao servidor.";
+            const message = "Sem conexao com o servidor. Tente novamente.";
             setErrorMessage(message);
             showToast(message, "error");
         } finally {
