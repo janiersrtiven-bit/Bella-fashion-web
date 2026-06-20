@@ -19,6 +19,23 @@ type Produto = {
   horaCadastro: string;
 };
 
+function normalizeImagePath(value: string) {
+  const image = value.trim();
+
+  if (!image) return image;
+
+  if (
+    image.startsWith("/produtos/") ||
+    /^https?:\/\//i.test(image) ||
+    image.startsWith("blob:") ||
+    image.startsWith("data:")
+  ) {
+    return image;
+  }
+
+  return `/produtos/${image.replace(/^\/+/, "")}`;
+}
+
 export default function NovoProdutoPage() {
   const router = useRouter();
 
@@ -289,7 +306,7 @@ export default function NovoProdutoPage() {
                   <div className="mx-auto max-w-sm">
                     <div className="relative mx-auto h-96 overflow-hidden rounded-3xl bg-purple-100 shadow-sm">
                       <Image
-                        src={preview}
+                        src={normalizeImagePath(preview)}
                         alt="Prévia do produto"
                         fill
                         className="object-cover"

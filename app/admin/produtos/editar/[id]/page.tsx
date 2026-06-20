@@ -19,6 +19,23 @@ type Produto = {
   horaCadastro?: string;
 };
 
+function normalizeImagePath(value: string) {
+  const image = value.trim();
+
+  if (!image) return image;
+
+  if (
+    image.startsWith("/produtos/") ||
+    /^https?:\/\//i.test(image) ||
+    image.startsWith("blob:") ||
+    image.startsWith("data:")
+  ) {
+    return image;
+  }
+
+  return `/produtos/${image.replace(/^\/+/, "")}`;
+}
+
 function formatarPreco(valor: string) {
   const valorLimpo = valor
     .replace("R$", "")
@@ -81,7 +98,7 @@ export default function EditarProdutoPage() {
         setDestaque(produto.destaque);
         setStatus(produto.status);
         setDescricao(produto.descricao || "");
-        setPreview(produto.imagem);
+        setPreview(normalizeImagePath(produto.imagem));
         setDataCadastroOriginal(produto.dataCadastro || "");
         setHoraCadastroOriginal(produto.horaCadastro || "");
       })
@@ -372,7 +389,7 @@ export default function EditarProdutoPage() {
                   <div className="mx-auto max-w-sm">
                     <div className="relative mx-auto h-96 overflow-hidden rounded-3xl bg-purple-100 shadow-sm">
                       <Image
-                        src={preview}
+                        src={normalizeImagePath(preview)}
                         alt="Prévia do produto"
                         fill
                         className="object-cover"
