@@ -1,5 +1,32 @@
 import { PrismaClient } from "@prisma/client";
 
+function isValidPostgresUrl(value: string | undefined) {
+    if (!value) return false;
+    const normalized = value.trim().toLowerCase();
+    return normalized.startsWith("postgresql://") || normalized.startsWith("postgres://");
+}
+
+function ensureDatabaseUrlFromVercelPostgres() {
+    const currentUrl = process.env.DATABASE_URL;
+    const vercelPrismaUrl = process.env.POSTGRES_PRISMA_URL;
+    const vercelUrl = process.env.POSTGRES_URL;
+
+    if (isValidPostgresUrl(currentUrl)) {
+        return;
+    }
+
+    if (isValidPostgresUrl(vercelPrismaUrl)) {
+        process.env.DATABASE_URL = vercelPrismaUrl;
+        return;
+    }
+
+    if (isValidPostgresUrl(vercelUrl)) {
+        process.env.DATABASE_URL = vercelUrl;
+    }
+}
+
+ensureDatabaseUrlFromVercelPostgres();
+
 declare global {
     // eslint-disable-next-line no-var
     var prisma: PrismaClient | undefined;
