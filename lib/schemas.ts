@@ -68,5 +68,26 @@ export const pedidoUpdateSchema = z.object({
     observacoes: z.string().optional(),
 });
 
+const optionalTrimmedString = z
+    .string()
+    .optional()
+    .transform((value) => {
+        const normalized = value?.trim();
+        return normalized ? normalized : undefined;
+    });
+
+export const siteConfigSchema = z.object({
+    heroImagem: optionalTrimmedString,
+    heroTitulo: optionalTrimmedString,
+    heroSubtitulo: optionalTrimmedString,
+    heroMaterial: optionalTrimmedString,
+    heroPrecoDestaque: optionalTrimmedString,
+    heroWhatsappTexto: optionalTrimmedString,
+    heroWhatsappNumero: optionalTrimmedString.refine(
+        (value) => !value || /^\d{10,15}$/.test(value.replace(/\D/g, "")),
+        "WhatsApp inválido. Use apenas números com DDD."
+    ),
+});
+
 export type PedidoCreateInput = z.infer<typeof pedidoCreateSchema>;
 export type PedidoUpdateInput = z.infer<typeof pedidoUpdateSchema>;

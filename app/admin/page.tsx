@@ -59,6 +59,14 @@ export default function AdminPage() {
             <p className="text-sm text-gray-500">Status</p>
             <h2 className="mt-2 text-2xl font-bold text-green-600">Online</h2>
           </div>
+
+          <a
+            href="/admin/configuracoes"
+            className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+            <p className="text-sm text-gray-500">Configurações</p>
+            <h2 className="mt-2 text-2xl font-bold text-purple-950">Site</h2>
+          </a>
         </div>
 
         <section className="mt-10 rounded-3xl bg-white p-6 shadow-sm">
@@ -88,6 +96,13 @@ export default function AdminPage() {
             <button className="rounded-2xl bg-purple-100 px-5 py-4 font-semibold text-purple-900 transition hover:bg-purple-200">
               Configurações
             </button>
+
+            <a
+              href="/admin/configuracoes"
+              className="rounded-2xl bg-purple-100 px-5 py-4 text-center font-semibold text-purple-900 transition hover:bg-purple-200"
+            >
+              Configurar Home
+            </a>
           </div>
         </section>
 

@@ -1,4 +1,4 @@
-import { produtosDefault, type Produto } from "@/lib/produtos";
+import type { Produto } from "@/lib/produtos";
 
 export type Pedido = {
     id: number;
@@ -26,20 +26,20 @@ const pedidosKey = "bella-fashion-pedidos";
 
 export function getProdutos(): Produto[] {
     if (typeof window === "undefined") {
-        return produtosDefault;
+        return [];
     }
 
     const produtosSalvos = window.localStorage.getItem(produtosKey);
 
     if (!produtosSalvos) {
-        return produtosDefault;
+        return [];
     }
 
     try {
         const produtos = JSON.parse(produtosSalvos) as Produto[];
-        return Array.isArray(produtos) && produtos.length > 0 ? produtos : produtosDefault;
+        return Array.isArray(produtos) ? produtos : [];
     } catch {
-        return produtosDefault;
+        return [];
     }
 }
 

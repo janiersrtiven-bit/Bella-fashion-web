@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import { produtosDefault } from "@/lib/produtos";
 
 declare global {
     // eslint-disable-next-line no-var
@@ -14,36 +13,6 @@ export const prisma =
 
 if (process.env.NODE_ENV !== "production") {
     globalThis.prisma = prisma;
-}
-
-export async function ensureProductsSeeded() {
-    const count = await prisma.produto.count();
-
-    if (count > 0) {
-        return;
-    }
-
-    const agora = new Date();
-    const dataCadastro = agora.toLocaleDateString("pt-BR");
-    const horaCadastro = agora.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-
-    await prisma.produto.createMany({
-        data: produtosDefault.map((produto) => ({
-            nome: produto.nome,
-            imagem: produto.imagem,
-            preco: produto.preco,
-            destaque: produto.destaque,
-            descricao: produto.descricao,
-            status: produto.status ?? "Ativo",
-            categoria: produto.categoria ?? "Bodies",
-            estoque: produto.estoque ?? 0,
-            dataCadastro,
-            horaCadastro,
-        })),
-    });
 }
 
 export function parsePriceToCents(preco: string) {
@@ -62,7 +31,6 @@ export function parsePriceToCents(preco: string) {
 }
 
 export async function getProdutos() {
-    await ensureProductsSeeded();
     return prisma.produto.findMany({
         orderBy: {
             id: "asc",
@@ -70,8 +38,18 @@ export async function getProdutos() {
     });
 }
 
+export async function getProdutosPublicos() {
+    return prisma.produto.findMany({
+        where: {
+            status: "Ativo",
+        },
+        orderBy: {
+            id: "asc",
+        },
+    });
+}
+
 export async function getProdutoById(id: number) {
-    await ensureProductsSeeded();
     return prisma.produto.findUnique({
         where: {
             id,
@@ -211,4 +189,35 @@ export async function updatePedido(id: number, data: Partial<{
 
 export async function deletePedido(id: number) {
     return prisma.pedido.delete({ where: { id } });
+}
+
+type SiteConfigInput = {
+    heroImagem?: string;
+    heroTitulo?: string;
+    heroSubtitulo?: string;
+    heroMaterial?: string;
+    heroPrecoDestaque?: string;
+    heroWhatsappTexto?: string;
+    heroWhatsappNumero?: string;
+};
+
+export async function getSiteConfig() {
+    return prisma.configuracaoSite.findUnique({
+        where: {
+            singleton: "default",
+        },
+    });
+}
+
+export async function upsertSiteConfig(data: SiteConfigInput) {
+    return prisma.configuracaoSite.upsert({
+        where: {
+            singleton: "default",
+        },
+        create: {
+            singleton: "default",
+            ...data,
+        },
+        update: data,
+    });
 }

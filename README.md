@@ -2,6 +2,13 @@
 
 Loja Next.js com checkout, pedidos automáticos em banco (Prisma + PostgreSQL), Stripe e notificações automáticas.
 
+## Home dinâmico (sem conteúdo demo)
+
+- O Home (`/`) não usa conteúdo fixo de demonstração.
+- Hero e botão WhatsApp são configurados em `/admin/configuracoes`.
+- Catálogo do Home mostra somente produtos `Ativo` criados no admin.
+- Sem configuração/produtos, o Home exibe estado limpo sem foto ou preço demo.
+
 ## Estado atual (pronto para vender)
 
 - Pedidos automáticos: ativo.
