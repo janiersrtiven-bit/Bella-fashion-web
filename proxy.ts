@@ -46,7 +46,22 @@ export function proxy(request: NextRequest) {
     }
 
     const authHeader = request.headers.get("authorization");
-    if (!isValidBasicAuth(authHeader)) {
+    if (isAdminPath) {
+        if (!isValidBasicAuth(authHeader)) {
+            return unauthorizedResponse();
+        }
+
+        return NextResponse.next();
+    }
+
+    if (isValidBasicAuth(authHeader)) {
+        return NextResponse.next();
+    }
+
+    const referer = request.headers.get("referer") || "";
+    const isAdminSameOriginRequest = referer.startsWith(`${request.nextUrl.origin}/admin`);
+
+    if (!isAdminSameOriginRequest) {
         return unauthorizedResponse();
     }
 
