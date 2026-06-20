@@ -4,6 +4,14 @@ import { produtoSchema, produtoUpdateSchema } from "@/lib/schemas";
 
 export const dynamic = "force-dynamic";
 
+function getSafeErrorMessage(error: unknown) {
+    if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
+        return error.message;
+    }
+
+    return "Erro interno desconhecido.";
+}
+
 export async function GET(request: Request) {
     const url = new URL(request.url);
     const idParam = url.searchParams.get("id");
@@ -35,7 +43,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    const body = await request.json();
+    let body: unknown;
+
+    try {
+        body = await request.json();
+    } catch {
+        return NextResponse.json({ error: "Payload JSON inválido." }, { status: 400 });
+    }
+
     const parseResult = produtoSchema.safeParse(body);
     if (!parseResult.success) {
         return NextResponse.json(
@@ -47,8 +62,11 @@ export async function POST(request: Request) {
     try {
         const produto = await createProduto(parseResult.data);
         return NextResponse.json(produto, { status: 201 });
-    } catch {
-        return NextResponse.json({ error: "Erro ao criar produto." }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json(
+            { error: `Erro ao criar produto. ${getSafeErrorMessage(error)}` },
+            { status: 500 }
+        );
     }
 }
 
@@ -64,7 +82,14 @@ export async function PUT(request: Request) {
         return NextResponse.json({ error: "ID do produto inválido." }, { status: 400 });
     }
 
-    const body = await request.json();
+    let body: unknown;
+
+    try {
+        body = await request.json();
+    } catch {
+        return NextResponse.json({ error: "Payload JSON inválido." }, { status: 400 });
+    }
+
     const parseResult = produtoUpdateSchema.safeParse(body);
     if (!parseResult.success) {
         return NextResponse.json(
@@ -76,8 +101,11 @@ export async function PUT(request: Request) {
     try {
         const produto = await updateProduto(id, parseResult.data);
         return NextResponse.json(produto);
-    } catch {
-        return NextResponse.json({ error: "Erro ao atualizar produto." }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json(
+            { error: `Erro ao atualizar produto. ${getSafeErrorMessage(error)}` },
+            { status: 500 }
+        );
     }
 }
 
