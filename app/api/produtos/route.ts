@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         const produtos = await getProdutos();
         return NextResponse.json(produtos);
     } catch {
-        return NextResponse.json({ error: "Erro ao carregar produtos." }, { status: 500 });
+        return NextResponse.json([]);
     }
 }
 

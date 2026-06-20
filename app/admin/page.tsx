@@ -1,6 +1,20 @@
 import Link from "next/link";
+import { prisma } from "@/lib/db";
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  let totalProdutos = 0;
+  let totalPedidos = 0;
+
+  try {
+    [totalProdutos, totalPedidos] = await Promise.all([
+      prisma.produto.count(),
+      prisma.pedido.count(),
+    ]);
+  } catch {
+    totalProdutos = 0;
+    totalPedidos = 0;
+  }
+
   return (
     <main className="min-h-screen bg-purple-50 p-6">
       <div className="mx-auto max-w-7xl">
@@ -37,18 +51,21 @@ export default function AdminPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-4">
-          <a
+          <Link
             href="/admin/produtos"
             className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
           >
             <p className="text-sm text-gray-500">Produtos</p>
-            <h2 className="mt-2 text-3xl font-bold text-purple-950">3</h2>
-          </a>
+            <h2 className="mt-2 text-3xl font-bold text-purple-950">{totalProdutos}</h2>
+          </Link>
 
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <Link
+            href="/admin/pedidos"
+            className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
             <p className="text-sm text-gray-500">Pedidos</p>
-            <h2 className="mt-2 text-3xl font-bold text-purple-950">0</h2>
-          </div>
+            <h2 className="mt-2 text-3xl font-bold text-purple-950">{totalPedidos}</h2>
+          </Link>
 
           <div className="rounded-3xl bg-white p-6 shadow-sm">
             <p className="text-sm text-gray-500">Clientes</p>
@@ -60,13 +77,13 @@ export default function AdminPage() {
             <h2 className="mt-2 text-2xl font-bold text-green-600">Online</h2>
           </div>
 
-          <a
+          <Link
             href="/admin/configuracoes"
             className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
           >
             <p className="text-sm text-gray-500">Configurações</p>
             <h2 className="mt-2 text-2xl font-bold text-purple-950">Site</h2>
-          </a>
+          </Link>
         </div>
 
         <section className="mt-10 rounded-3xl bg-white p-6 shadow-sm">
@@ -89,13 +106,19 @@ export default function AdminPage() {
               Ver produtos
             </a>
 
-            <button className="rounded-2xl bg-purple-100 px-5 py-4 font-semibold text-purple-900 transition hover:bg-purple-200">
+            <a
+              href="/admin/pedidos"
+              className="rounded-2xl bg-purple-100 px-5 py-4 text-center font-semibold text-purple-900 transition hover:bg-purple-200"
+            >
               Ver pedidos
-            </button>
+            </a>
 
-            <button className="rounded-2xl bg-purple-100 px-5 py-4 font-semibold text-purple-900 transition hover:bg-purple-200">
+            <a
+              href="/admin/configuracoes"
+              className="rounded-2xl bg-purple-100 px-5 py-4 text-center font-semibold text-purple-900 transition hover:bg-purple-200"
+            >
               Configurações
-            </button>
+            </a>
 
             <a
               href="/admin/configuracoes"
