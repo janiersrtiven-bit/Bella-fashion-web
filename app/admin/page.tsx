@@ -19,12 +19,21 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <Link
-            href="/"
-            className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-purple-900 shadow-sm transition hover:bg-purple-100"
-          >
-            Ver loja
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/"
+              className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-purple-900 shadow-sm transition hover:bg-purple-100"
+            >
+              Ver loja
+            </Link>
+
+            <a
+              href="/api/admin/logout"
+              className="rounded-full bg-purple-100 px-5 py-3 text-sm font-semibold text-purple-900 shadow-sm transition hover:bg-purple-200"
+            >
+              Sair
+            </a>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-4">
@@ -92,7 +101,7 @@ export default function AdminPage() {
             <li>⏳ Upload de fotos</li>
             <li>⏳ Controle de pedidos</li>
             <li>⏳ Clientes</li>
-            <li>⏳ Login protegido para administrador</li>
+            <li>✅ Login protegido para administrador</li>
           </ul>
         </section>
       </div>

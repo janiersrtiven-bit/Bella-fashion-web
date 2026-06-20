@@ -1,6 +1,6 @@
 # Bella Fashion Web
 
-Loja Next.js com checkout, pedidos automáticos em banco (Prisma), Stripe e notificações automáticas.
+Loja Next.js com checkout, pedidos automáticos em banco (Prisma + PostgreSQL), Stripe e notificações automáticas.
 
 ## Estado atual (pronto para vender)
 
@@ -10,7 +10,7 @@ Loja Next.js com checkout, pedidos automáticos em banco (Prisma), Stripe e noti
 - Confirmação automática de pagamento via webhook Stripe: ativa.
 - Notificação automática por e-mail (SMTP): ativa quando variáveis SMTP estão preenchidas.
 - Notificação automática por WhatsApp Cloud API: ativa quando token e phone number ID estão preenchidos.
-- Painel administrativo protegido por autenticação básica: ativo quando ADMIN_USER e ADMIN_PASSWORD estão preenchidos.
+- Painel administrativo protegido por login com sessão segura (cookie HttpOnly): ativo quando ADMIN_USER e ADMIN_PASSWORD estão preenchidos.
 
 ## Executar localmente
 
@@ -78,13 +78,30 @@ Preencha no `.env`:
 ```env
 ADMIN_USER="seu_usuario_forte"
 ADMIN_PASSWORD="sua_senha_forte"
+ADMIN_AUTH_SECRET="segredo_longo_e_aleatorio"
 ```
 
 Resultado:
-- Rotas `/admin/*` exigem login.
+- Rotas `/admin/*` exigem login via `/admin/login`.
 - Alterações em produtos e pedidos (PUT/DELETE) exigem login.
 
-### 5) Compliance mínimo para venda
+### 5) Banco em produção (PostgreSQL)
+
+Preencha no `.env`:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=require"
+```
+
+Depois rode:
+
+```bash
+npx prisma db push
+```
+
+No Vercel, configure a mesma `DATABASE_URL` nas variáveis de ambiente do projeto.
+
+### 6) Compliance mínimo para venda
 
 - Política de Privacidade publicada em `/politica-privacidade`.
 - Termos de Uso publicados em `/termos`.

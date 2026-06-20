@@ -112,13 +112,22 @@ export default function Home() {
             </a>
           </nav>
 
-          <a
-            href={`https://wa.me/${whatsapp}`}
-            target="_blank"
-            className="rounded-full bg-purple-800 px-5 py-2 text-sm font-semibold text-white transition hover:bg-purple-900"
-          >
-            WhatsApp
-          </a>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin"
+              className="rounded-full border border-purple-200 bg-white px-4 py-2 text-xs font-semibold text-purple-900 transition hover:bg-purple-50"
+            >
+              Voltar ao Admin
+            </Link>
+
+            <a
+              href={`https://wa.me/${whatsapp}`}
+              target="_blank"
+              className="rounded-full bg-purple-800 px-5 py-2 text-sm font-semibold text-white transition hover:bg-purple-900"
+            >
+              WhatsApp
+            </a>
+          </div>
         </div>
       </header>
 

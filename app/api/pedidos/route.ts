@@ -2,28 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { pedidoCreateSchema, pedidoUpdateSchema } from "@/lib/schemas";
 import { sendOrderCreatedNotifications } from "@/lib/notifications";
+import { isAdminRequestAuthenticated } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
-
-function isAdminAuthenticated(request: Request) {
-    const adminUser = process.env.ADMIN_USER;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-
-    if (!adminUser || !adminPassword) {
-        return false;
-    }
-
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Basic ")) {
-        return false;
-    }
-
-    const base64Credentials = authHeader.split(" ")[1] ?? "";
-    const decoded = Buffer.from(base64Credentials, "base64").toString("utf-8");
-    const [user, password] = decoded.split(":");
-
-    return user === adminUser && password === adminPassword;
-}
 
 function parsePriceToNumber(value: string) {
     const normalized = value
@@ -76,7 +57,7 @@ export async function GET(request: Request) {
         return NextResponse.json(pedidos);
     }
 
-    if (isAdminAuthenticated(request)) {
+    if (await isAdminRequestAuthenticated(request)) {
         const pedidos = await prisma.pedido.findMany({
             orderBy: { id: "desc" },
         });
