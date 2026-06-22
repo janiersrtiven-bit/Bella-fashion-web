@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { pedidoCreateSchema, pedidoUpdateSchema } from "@/lib/schemas";
 import { sendOrderCreatedNotifications } from "@/lib/notifications";
 import { isAdminRequestAuthenticated } from "@/lib/admin-auth";
+import { getCurrentCustomer } from "@/lib/customer-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -152,6 +153,8 @@ export async function POST(request: Request) {
     }
 
     try {
+        const currentCustomer = await getCurrentCustomer();
+
         const pedido = await prisma.$transaction(async (tx) => {
             const produto = await tx.produto.findUnique({
                 where: { id: validatedPedido.produtoId },
@@ -178,8 +181,9 @@ export async function POST(request: Request) {
                 data: {
                     cliente: validatedPedido.cliente.trim(),
                     whatsapp: validatedPedido.whatsapp,
-                    emailCliente: validatedPedido.emailCliente,
+                    emailCliente: validatedPedido.emailCliente ?? currentCustomer?.email,
                     enderecoEntrega: validatedPedido.enderecoEntrega,
+                    ...(currentCustomer ? { clienteId: currentCustomer.id } : {}),
                     produtoId: produto.id,
                     produtoNome: produto.nome,
                     quantidade: validatedPedido.quantidade,
