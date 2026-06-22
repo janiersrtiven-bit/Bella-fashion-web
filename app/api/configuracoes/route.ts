@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSiteConfig, upsertSiteConfig } from "@/lib/db";
 import { siteConfigSchema } from "@/lib/schemas";
+import { isAdminRequestAuthenticated } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,10 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+    if (!(await isAdminRequestAuthenticated(request))) {
+        return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+    }
+
     let body: unknown;
 
     try {
@@ -55,13 +60,13 @@ export async function PUT(request: Request) {
 
     try {
         const updated = await upsertSiteConfig({
-            heroImagem: normalizeOptional(payload.heroImagem) ?? undefined,
-            heroTitulo: normalizeOptional(payload.heroTitulo) ?? undefined,
-            heroSubtitulo: normalizeOptional(payload.heroSubtitulo) ?? undefined,
-            heroMaterial: normalizeOptional(payload.heroMaterial) ?? undefined,
-            heroPrecoDestaque: normalizeOptional(payload.heroPrecoDestaque) ?? undefined,
-            heroWhatsappTexto: normalizeOptional(payload.heroWhatsappTexto) ?? undefined,
-            heroWhatsappNumero: normalizeOptional(payload.heroWhatsappNumero)?.replace(/\D/g, "") ?? undefined,
+            heroImagem: normalizeOptional(payload.heroImagem),
+            heroTitulo: normalizeOptional(payload.heroTitulo),
+            heroSubtitulo: normalizeOptional(payload.heroSubtitulo),
+            heroMaterial: normalizeOptional(payload.heroMaterial),
+            heroPrecoDestaque: normalizeOptional(payload.heroPrecoDestaque),
+            heroWhatsappTexto: normalizeOptional(payload.heroWhatsappTexto),
+            heroWhatsappNumero: normalizeOptional(payload.heroWhatsappNumero)?.replace(/\D/g, "") ?? null,
         });
 
         return NextResponse.json(updated);

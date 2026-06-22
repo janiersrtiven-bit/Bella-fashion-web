@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Termos de Uso | Bella Fashion",
+    title: "Termos de Uso",
     description: "Termos de uso, compra, entrega e trocas da Bella Fashion.",
 };
 
 export default function TermosPage() {
+    const contactEmail = process.env.COMPANY_EMAIL;
+    const contactWhatsapp = process.env.COMPANY_WHATSAPP;
+
     return (
         <main className="mx-auto min-h-screen w-full max-w-4xl px-6 py-12 text-gray-900">
             <h1 className="text-3xl font-bold text-purple-900">Termos de Uso</h1>
@@ -37,10 +41,15 @@ export default function TermosPage() {
 
                 <h2 className="text-xl font-semibold text-purple-900">5. Contato</h2>
                 <p>
-                    WhatsApp: +55 11 94062-5832 | E-mail:
-                    janierstivenrodrigueslondono@gmail.com.
+                    Use os canais oficiais informados no site
+                    {contactWhatsapp ? ` · WhatsApp: ${contactWhatsapp}` : ""}
+                    {contactEmail ? ` · E-mail: ${contactEmail}` : ""}.
                 </p>
             </section>
+
+            <Link href="/" className="mt-10 inline-block rounded-full bg-purple-800 px-6 py-3 font-semibold text-white hover:bg-purple-900">
+                Voltar à loja
+            </Link>
         </main>
     );
 }

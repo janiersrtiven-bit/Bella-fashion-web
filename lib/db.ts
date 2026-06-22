@@ -28,7 +28,6 @@ function ensureDatabaseUrlFromVercelPostgres() {
 ensureDatabaseUrlFromVercelPostgres();
 
 declare global {
-    // eslint-disable-next-line no-var
     var prisma: PrismaClient | undefined;
 }
 
@@ -219,13 +218,13 @@ export async function deletePedido(id: number) {
 }
 
 type SiteConfigInput = {
-    heroImagem?: string;
-    heroTitulo?: string;
-    heroSubtitulo?: string;
-    heroMaterial?: string;
-    heroPrecoDestaque?: string;
-    heroWhatsappTexto?: string;
-    heroWhatsappNumero?: string;
+    heroImagem?: string | null;
+    heroTitulo?: string | null;
+    heroSubtitulo?: string | null;
+    heroMaterial?: string | null;
+    heroPrecoDestaque?: string | null;
+    heroWhatsappTexto?: string | null;
+    heroWhatsappNumero?: string | null;
 };
 
 export async function getSiteConfig() {

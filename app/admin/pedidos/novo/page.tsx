@@ -53,9 +53,6 @@ export default function NovoPedidoPage() {
   const { toast, showToast, clearToast } = useToast();
 
   useEffect(() => {
-    setIsLoadingProducts(true);
-    setErrorMessage(null);
-
     fetch("/api/produtos")
       .then(async (response) => {
         if (!response.ok) {

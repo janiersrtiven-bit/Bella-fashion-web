@@ -71,19 +71,24 @@ function getAdminCredentials() {
     return { user, password };
 }
 
-async function signPayload(payload: string) {
+async function getSigningKey() {
     const secret = getAdminSecret();
     if (!secret) {
         return null;
     }
 
-    const key = await crypto.subtle.importKey(
+    return crypto.subtle.importKey(
         "raw",
         new TextEncoder().encode(secret),
         { name: "HMAC", hash: "SHA-256" },
         false,
-        ["sign"]
+        ["sign", "verify"]
     );
+}
+
+async function signPayload(payload: string) {
+    const key = await getSigningKey();
+    if (!key) return null;
 
     const signature = await crypto.subtle.sign(
         "HMAC",
@@ -95,6 +100,24 @@ async function signPayload(payload: string) {
     const binary = String.fromCharCode(...bytes);
 
     return toBase64Url(binary);
+}
+
+async function verifyPayloadSignature(payload: string, signature: string) {
+    const key = await getSigningKey();
+    if (!key) return false;
+
+    try {
+        const binary = fromBase64Url(signature);
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+        return crypto.subtle.verify(
+            "HMAC",
+            key,
+            bytes,
+            new TextEncoder().encode(payload)
+        );
+    } catch {
+        return false;
+    }
 }
 
 function decodeBasicCredentials(authHeader: string | null) {
@@ -168,8 +191,7 @@ export async function isValidAdminSessionToken(token: string | null) {
             return false;
         }
 
-        const expectedSignature = await signPayload(payload);
-        return Boolean(expectedSignature && expectedSignature === providedSignature);
+        return verifyPayloadSignature(payload, providedSignature);
     } catch {
         return false;
     }

@@ -9,7 +9,7 @@ Loja Next.js com checkout, pedidos automáticos em banco (Prisma + PostgreSQL), 
 - Catálogo do Home mostra somente produtos `Ativo` criados no admin.
 - Sem configuração/produtos, o Home exibe estado limpo sem foto ou preço demo.
 
-## Estado atual (pronto para vender)
+## Estado atual (base técnica de produção)
 
 - Pedidos automáticos: ativo.
 - Atualização de estoque automática: ativa.
@@ -18,6 +18,9 @@ Loja Next.js com checkout, pedidos automáticos em banco (Prisma + PostgreSQL), 
 - Notificação automática por e-mail (SMTP): ativa quando variáveis SMTP estão preenchidas.
 - Notificação automática por WhatsApp Cloud API: ativa quando token e phone number ID estão preenchidos.
 - Painel administrativo protegido por login com sessão segura (cookie HttpOnly): ativo quando ADMIN_USER e ADMIN_PASSWORD estão preenchidos.
+- Consulta pública de pedido protegida por número do pedido + WhatsApp.
+- Preço e estoque validados no servidor; o navegador não define o valor cobrado.
+- SEO social com Open Graph, sitemap, robots e manifest.
 
 ## Executar localmente
 
@@ -53,6 +56,7 @@ Preencha no `.env`:
 STRIPE_SECRET_KEY="sk_live_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
 NEXT_PUBLIC_APP_URL="https://seu-dominio.com"
+NEXT_PUBLIC_INSTAGRAM_URL="https://www.instagram.com/seu_perfil/"
 ```
 
 No painel Stripe:
@@ -133,3 +137,6 @@ npm run build
 ```
 
 Se o build passar, a aplicação está pronta para deploy.
+
+Antes de divulgar, confirme também que `NEXT_PUBLIC_APP_URL` usa o domínio HTTPS real,
+adicione o perfil oficial do Instagram e complete nos Termos os dados legais da empresa.

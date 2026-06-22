@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-    title: "Política de Privacidade | Bella Fashion",
+    title: "Política de Privacidade",
     description:
         "Política de Privacidade da Bella Fashion para atendimento, pedidos e pagamentos.",
 };
 
 export default function PoliticaPrivacidadePage() {
+    const contactEmail = process.env.COMPANY_EMAIL;
+
     return (
         <main className="mx-auto min-h-screen w-full max-w-4xl px-6 py-12 text-gray-900">
             <h1 className="text-3xl font-bold text-purple-900">Política de Privacidade</h1>
@@ -43,10 +46,15 @@ export default function PoliticaPrivacidadePage() {
 
                 <h2 className="text-xl font-semibold text-purple-900">5. Contato</h2>
                 <p>
-                    Para dúvidas sobre privacidade, entre em contato pelo e-mail
-                    janierstivenrodrigueslondono@gmail.com.
+                    Para dúvidas sobre privacidade ou solicitações relacionadas aos seus dados,
+                    entre em contato pelos canais oficiais da Bella Fashion
+                    {contactEmail ? `: ${contactEmail}.` : "."}
                 </p>
             </section>
+
+            <Link href="/" className="mt-10 inline-block rounded-full bg-purple-800 px-6 py-3 font-semibold text-white hover:bg-purple-900">
+                Voltar à loja
+            </Link>
         </main>
     );
 }

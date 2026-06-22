@@ -6,7 +6,12 @@ type LoginPageProps = {
 
 function resolveNextPath(value: string | string[] | undefined) {
     const nextPath = Array.isArray(value) ? value[0] : value;
-    if (!nextPath || !nextPath.startsWith("/")) {
+    if (
+        !nextPath ||
+        !nextPath.startsWith("/") ||
+        nextPath.startsWith("//") ||
+        nextPath.includes("\\")
+    ) {
         return "/admin";
     }
 

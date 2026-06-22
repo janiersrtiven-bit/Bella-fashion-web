@@ -40,9 +40,6 @@ export default function ProdutosAdminPage() {
   const { toast, showToast, clearToast } = useToast();
 
   useEffect(() => {
-    setIsLoading(true);
-    setErrorMessage(null);
-
     fetch("/api/produtos")
       .then(async (response) => {
         if (!response.ok) {

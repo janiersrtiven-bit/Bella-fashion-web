@@ -23,14 +23,6 @@ type Pedido = {
   horaPedido: string;
 };
 
-type Produto = {
-  id: number;
-  nome: string;
-  preco: string;
-  status: string;
-  estoque: number;
-};
-
 function statusClasse(status: string) {
   if (status === "Pago" || status === "Pagamento confirmado" || status === "Entregue") {
     return "bg-green-100 text-green-700";
@@ -61,9 +53,6 @@ export default function PedidosAdminPage() {
   const { toast, showToast, clearToast } = useToast();
 
   useEffect(() => {
-    setIsLoading(true);
-    setErrorMessage(null);
-
     fetch("/api/pedidos")
       .then(async (response) => {
         if (!response.ok) {

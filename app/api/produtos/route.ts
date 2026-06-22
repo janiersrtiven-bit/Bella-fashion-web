@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
-import { getProdutos, getProdutoById, createProduto, updateProduto, deleteProduto } from "@/lib/db";
+import {
+    getProdutos,
+    getProdutosPublicos,
+    getProdutoById,
+    createProduto,
+    updateProduto,
+    deleteProduto,
+} from "@/lib/db";
 import { produtoSchema, produtoUpdateSchema } from "@/lib/schemas";
+import { isAdminRequestAuthenticated } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +24,8 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const idParam = url.searchParams.get("id");
 
+    const isAdmin = await isAdminRequestAuthenticated(request);
+
     if (idParam) {
         const id = Number(idParam);
         if (!Number.isInteger(id) || id <= 0) {
@@ -24,25 +34,35 @@ export async function GET(request: Request) {
 
         try {
             const produto = await getProdutoById(id);
-            if (!produto) {
+            if (!produto || (!isAdmin && produto.status !== "Ativo")) {
                 return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
             }
 
             return NextResponse.json(produto);
         } catch {
-            return NextResponse.json({ error: "Erro ao carregar produto." }, { status: 500 });
+            return NextResponse.json(
+                { error: "Catálogo temporariamente indisponível." },
+                { status: 503 }
+            );
         }
     }
 
     try {
-        const produtos = await getProdutos();
+        const produtos = isAdmin ? await getProdutos() : await getProdutosPublicos();
         return NextResponse.json(produtos);
     } catch {
-        return NextResponse.json([]);
+        return NextResponse.json(
+            { error: "Catálogo temporariamente indisponível." },
+            { status: 503 }
+        );
     }
 }
 
 export async function POST(request: Request) {
+    if (!(await isAdminRequestAuthenticated(request))) {
+        return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+    }
+
     let body: unknown;
 
     try {
@@ -71,6 +91,10 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
+    if (!(await isAdminRequestAuthenticated(request))) {
+        return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+    }
+
     const url = new URL(request.url);
     const idParam = url.searchParams.get("id");
     if (!idParam) {
@@ -110,6 +134,10 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+    if (!(await isAdminRequestAuthenticated(request))) {
+        return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+    }
+
     const url = new URL(request.url);
     const idParam = url.searchParams.get("id");
     if (!idParam) {

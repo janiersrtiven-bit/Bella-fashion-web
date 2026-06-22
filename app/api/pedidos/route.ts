@@ -6,6 +6,12 @@ import { isAdminRequestAuthenticated } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
+class PedidoError extends Error {
+    constructor(message: string, readonly status = 400) {
+        super(message);
+    }
+}
+
 function parsePriceToNumber(value: string) {
     const normalized = value
         .replace(/[^\d,.-]/g, "")
@@ -23,56 +29,104 @@ function formatCurrencyBRL(value: number) {
     }).format(value);
 }
 
+function publicPedido(pedido: {
+    id: number;
+    cliente: string;
+    produtoNome: string;
+    quantidade: number;
+    valorTotal: string;
+    metodoPagamento: string;
+    statusPagamento: string;
+    statusPedido: string;
+    codigoRastreio: string | null;
+    statusEntrega: string;
+    enderecoEntrega: string | null;
+    dataPedido: string;
+    horaPedido: string;
+}) {
+    return {
+        id: pedido.id,
+        cliente: pedido.cliente,
+        produtoNome: pedido.produtoNome,
+        quantidade: pedido.quantidade,
+        valorTotal: pedido.valorTotal,
+        metodoPagamento: pedido.metodoPagamento,
+        statusPagamento: pedido.statusPagamento,
+        statusPedido: pedido.statusPedido,
+        codigoRastreio: pedido.codigoRastreio,
+        statusEntrega: pedido.statusEntrega,
+        enderecoEntrega: pedido.enderecoEntrega,
+        dataPedido: pedido.dataPedido,
+        horaPedido: pedido.horaPedido,
+    };
+}
+
+function errorResponse(error: unknown, fallback: string) {
+    if (error instanceof PedidoError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
+    return NextResponse.json({ error: fallback }, { status: 500 });
+}
+
 export async function GET(request: Request) {
     const url = new URL(request.url);
     const idParam = url.searchParams.get("id");
-    const whatsapp = url.searchParams.get("whatsapp");
+    const whatsappParam = url.searchParams.get("whatsapp");
+    const isAdmin = await isAdminRequestAuthenticated(request);
 
-    if (idParam) {
-        const id = Number(idParam);
-        if (!Number.isInteger(id) || id <= 0) {
-            return NextResponse.json({ error: "ID do pedido inválido." }, { status: 400 });
+    try {
+      if (isAdmin) {
+        if (idParam) {
+            const id = Number(idParam);
+            if (!Number.isInteger(id) || id <= 0) {
+                return NextResponse.json({ error: "ID do pedido inválido." }, { status: 400 });
+            }
+
+            const pedido = await prisma.pedido.findUnique({ where: { id } });
+            return NextResponse.json(pedido);
         }
 
-        const pedido = await prisma.pedido.findUnique({
-            where: { id },
-        });
-        return NextResponse.json(pedido);
+          const pedidos = await prisma.pedido.findMany({ orderBy: { id: "desc" } });
+          return NextResponse.json(pedidos);
+      }
+
+      if (!idParam || !whatsappParam) {
+          return NextResponse.json(
+              { error: "Informe o número do pedido e o WhatsApp usado na compra." },
+              { status: 400 }
+          );
+      }
+
+      const id = Number(idParam);
+      const whatsapp = whatsappParam.replace(/\D/g, "");
+
+      if (!Number.isInteger(id) || id <= 0) {
+          return NextResponse.json({ error: "ID do pedido inválido." }, { status: 400 });
+      }
+
+      if (!/^\d{10,15}$/.test(whatsapp)) {
+          return NextResponse.json({ error: "WhatsApp inválido." }, { status: 400 });
+      }
+
+      const pedido = await prisma.pedido.findFirst({ where: { id, whatsapp } });
+      return NextResponse.json(pedido ? publicPedido(pedido) : null);
+    } catch {
+      return NextResponse.json(
+        { error: "Serviço de pedidos temporariamente indisponível." },
+        { status: 503 }
+      );
     }
-
-    if (whatsapp) {
-        const normalizedWhatsapp = whatsapp.replace(/\D/g, "");
-        if (!/^\d{10,15}$/.test(normalizedWhatsapp)) {
-            return NextResponse.json({ error: "WhatsApp inválido." }, { status: 400 });
-        }
-
-        const pedidos = await prisma.pedido.findMany({
-            where: {
-                whatsapp: {
-                    contains: normalizedWhatsapp,
-                },
-            },
-            orderBy: { id: "desc" },
-        });
-        return NextResponse.json(pedidos);
-    }
-
-    if (await isAdminRequestAuthenticated(request)) {
-        const pedidos = await prisma.pedido.findMany({
-            orderBy: { id: "desc" },
-        });
-
-        return NextResponse.json(pedidos);
-    }
-
-    return NextResponse.json(
-        { error: "Informe id ou whatsapp para consultar pedidos." },
-        { status: 400 }
-    );
 }
 
 export async function POST(request: Request) {
-    const body = await request.json();
+    let body: unknown;
+
+    try {
+        body = await request.json();
+    } catch {
+        return NextResponse.json({ error: "Payload JSON inválido." }, { status: 400 });
+    }
 
     const parseResult = pedidoCreateSchema.safeParse(body);
     if (!parseResult.success) {
@@ -83,88 +137,110 @@ export async function POST(request: Request) {
     }
 
     const validatedPedido = parseResult.data;
-
-    const produto = await prisma.produto.findUnique({
-        where: { id: validatedPedido.produtoId },
-    });
-
-    if (!produto) {
-        return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
-    }
-
-    if (produto.estoque < validatedPedido.quantidade) {
-        return NextResponse.json({ error: "Estoque insuficiente." }, { status: 400 });
-    }
-
+    const isAdmin = await isAdminRequestAuthenticated(request);
     const now = new Date();
-    const totalCalculado = formatCurrencyBRL(
-        parsePriceToNumber(produto.preco) * validatedPedido.quantidade
-    );
 
-    const pedido = await prisma.pedido.create({
-        data: {
-            cliente: validatedPedido.cliente,
-            whatsapp: validatedPedido.whatsapp,
-            emailCliente: validatedPedido.emailCliente,
-            enderecoEntrega: validatedPedido.enderecoEntrega,
-            produtoId: validatedPedido.produtoId,
-            produtoNome: produto.nome,
-            quantidade: validatedPedido.quantidade,
-            valorTotal: totalCalculado,
-            metodoPagamento: validatedPedido.metodoPagamento,
-            statusPagamento: validatedPedido.statusPagamento ?? "Aguardando pagamento",
-            statusPedido: validatedPedido.statusPedido ?? "Pedido recebido",
-            statusEntrega: validatedPedido.statusEntrega ?? "Aguardando envio",
-            observacoes: validatedPedido.observacoes,
-            dataPedido: now.toLocaleDateString("pt-BR"),
-            horaPedido: now.toLocaleTimeString("pt-BR", {
-                hour: "2-digit",
-                minute: "2-digit",
-            }),
-        },
-    });
+    if (!isAdmin && !validatedPedido.enderecoEntrega) {
+        return NextResponse.json(
+            { error: "Informe o endereço completo para entrega." },
+            { status: 400 }
+        );
+    }
 
-    await prisma.produto.update({
-        where: { id: produto.id },
-        data: { estoque: produto.estoque - validatedPedido.quantidade },
-    });
+    if (!isAdmin && !["Pix", "Cartão"].includes(validatedPedido.metodoPagamento)) {
+        return NextResponse.json({ error: "Forma de pagamento indisponível." }, { status: 400 });
+    }
 
-    void sendOrderCreatedNotifications({
-        id: pedido.id,
-        cliente: pedido.cliente,
-        whatsapp: pedido.whatsapp,
-        emailCliente: pedido.emailCliente,
-        produtoNome: pedido.produtoNome,
-        quantidade: pedido.quantidade,
-        valorTotal: pedido.valorTotal,
-        metodoPagamento: pedido.metodoPagamento,
-        statusPagamento: pedido.statusPagamento,
-        statusPedido: pedido.statusPedido,
-        statusEntrega: pedido.statusEntrega,
-        dataPedido: pedido.dataPedido,
-        horaPedido: pedido.horaPedido,
-    });
+    try {
+        const pedido = await prisma.$transaction(async (tx) => {
+            const produto = await tx.produto.findUnique({
+                where: { id: validatedPedido.produtoId },
+            });
 
-    return NextResponse.json(pedido, { status: 201 });
+            if (!produto || (!isAdmin && produto.status !== "Ativo")) {
+                throw new PedidoError("Produto não encontrado.", 404);
+            }
+
+            const reserva = await tx.produto.updateMany({
+                where: {
+                    id: produto.id,
+                    estoque: { gte: validatedPedido.quantidade },
+                    ...(isAdmin ? {} : { status: "Ativo" }),
+                },
+                data: { estoque: { decrement: validatedPedido.quantidade } },
+            });
+
+            if (reserva.count !== 1) {
+                throw new PedidoError("Estoque insuficiente para esta quantidade.");
+            }
+
+            return tx.pedido.create({
+                data: {
+                    cliente: validatedPedido.cliente.trim(),
+                    whatsapp: validatedPedido.whatsapp,
+                    emailCliente: validatedPedido.emailCliente,
+                    enderecoEntrega: validatedPedido.enderecoEntrega,
+                    produtoId: produto.id,
+                    produtoNome: produto.nome,
+                    quantidade: validatedPedido.quantidade,
+                    valorTotal: formatCurrencyBRL(
+                        parsePriceToNumber(produto.preco) * validatedPedido.quantidade
+                    ),
+                    metodoPagamento: validatedPedido.metodoPagamento,
+                    statusPagamento: isAdmin
+                        ? validatedPedido.statusPagamento
+                        : "Aguardando pagamento",
+                    statusPedido: isAdmin ? validatedPedido.statusPedido : "Pedido recebido",
+                    statusEntrega: isAdmin
+                        ? validatedPedido.statusEntrega
+                        : "Aguardando envio",
+                    observacoes: validatedPedido.observacoes,
+                    dataPedido: now.toLocaleDateString("pt-BR"),
+                    horaPedido: now.toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    }),
+                },
+            });
+        });
+
+        void sendOrderCreatedNotifications({
+            id: pedido.id,
+            cliente: pedido.cliente,
+            whatsapp: pedido.whatsapp,
+            emailCliente: pedido.emailCliente,
+            produtoNome: pedido.produtoNome,
+            quantidade: pedido.quantidade,
+            valorTotal: pedido.valorTotal,
+            metodoPagamento: pedido.metodoPagamento,
+            statusPagamento: pedido.statusPagamento,
+            statusPedido: pedido.statusPedido,
+            statusEntrega: pedido.statusEntrega,
+            dataPedido: pedido.dataPedido,
+            horaPedido: pedido.horaPedido,
+        });
+
+        return NextResponse.json(pedido, { status: 201 });
+    } catch (error) {
+        return errorResponse(error, "Não foi possível registrar o pedido.");
+    }
 }
 
 export async function PUT(request: Request) {
-    const url = new URL(request.url);
-    const idParam = url.searchParams.get("id");
-
-    if (!idParam) {
-        return NextResponse.json({ error: "ID do pedido é obrigatório." }, { status: 400 });
+    if (!(await isAdminRequestAuthenticated(request))) {
+        return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
     }
 
-    const pedidoId = Number(idParam);
-    const body = await request.json();
+    const pedidoId = Number(new URL(request.url).searchParams.get("id"));
+    if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
+        return NextResponse.json({ error: "ID do pedido inválido." }, { status: 400 });
+    }
 
-    const pedidoAtual = await prisma.pedido.findUnique({
-        where: { id: pedidoId },
-    });
-
-    if (!pedidoAtual) {
-        return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
+    let body: unknown;
+    try {
+        body = await request.json();
+    } catch {
+        return NextResponse.json({ error: "Payload JSON inválido." }, { status: 400 });
     }
 
     const parseResult = pedidoUpdateSchema.safeParse(body);
@@ -175,114 +251,103 @@ export async function PUT(request: Request) {
         );
     }
 
-    const validatedBody = parseResult.data;
-    const novoProdutoId = Number(validatedBody.produtoId ?? pedidoAtual.produtoId);
-    const novaQuantidade = Number(validatedBody.quantidade ?? pedidoAtual.quantidade);
+    try {
+        const pedidoAtualizado = await prisma.$transaction(async (tx) => {
+            const pedidoAtual = await tx.pedido.findUnique({ where: { id: pedidoId } });
+            if (!pedidoAtual) throw new PedidoError("Pedido não encontrado.", 404);
 
-    if (!novoProdutoId || !Number.isInteger(novaQuantidade) || novaQuantidade <= 0) {
-        return NextResponse.json({ error: "Produto e quantidade válidos são obrigatórios." }, { status: 400 });
-    }
+            const validatedBody = parseResult.data;
+            const novoProdutoId = validatedBody.produtoId ?? pedidoAtual.produtoId;
+            const novaQuantidade = validatedBody.quantidade ?? pedidoAtual.quantidade;
+            const produtoNovo = await tx.produto.findUnique({ where: { id: novoProdutoId } });
 
-    const produtoAntigo = await prisma.produto.findUnique({
-        where: { id: pedidoAtual.produtoId },
-    });
+            if (!produtoNovo) throw new PedidoError("Produto selecionado não encontrado.", 404);
 
-    const produtoNovo = await prisma.produto.findUnique({
-        where: { id: novoProdutoId },
-    });
+            if (pedidoAtual.produtoId === novoProdutoId) {
+                const diferenca = novaQuantidade - pedidoAtual.quantidade;
 
-    if (!produtoNovo) {
-        return NextResponse.json({ error: "Produto selecionado não encontrado." }, { status: 404 });
-    }
+                if (diferenca > 0) {
+                    const reserva = await tx.produto.updateMany({
+                        where: { id: novoProdutoId, estoque: { gte: diferenca } },
+                        data: { estoque: { decrement: diferenca } },
+                    });
+                    if (reserva.count !== 1) {
+                        throw new PedidoError("Estoque insuficiente para aumentar a quantidade.");
+                    }
+                } else if (diferenca < 0) {
+                    await tx.produto.update({
+                        where: { id: novoProdutoId },
+                        data: { estoque: { increment: Math.abs(diferenca) } },
+                    });
+                }
+            } else {
+                const reserva = await tx.produto.updateMany({
+                    where: { id: novoProdutoId, estoque: { gte: novaQuantidade } },
+                    data: { estoque: { decrement: novaQuantidade } },
+                });
+                if (reserva.count !== 1) {
+                    throw new PedidoError("Estoque insuficiente para o novo produto.");
+                }
 
-    if (pedidoAtual.produtoId === novoProdutoId) {
-        const diferenca = novaQuantidade - pedidoAtual.quantidade;
-        if (diferenca > 0 && produtoNovo.estoque < diferenca) {
-            return NextResponse.json({ error: "Estoque insuficiente para aumentar a quantidade." }, { status: 400 });
-        }
+                await tx.produto.update({
+                    where: { id: pedidoAtual.produtoId },
+                    data: { estoque: { increment: pedidoAtual.quantidade } },
+                });
+            }
 
-        await prisma.produto.update({
-            where: { id: produtoNovo.id },
-            data: { estoque: produtoNovo.estoque - diferenca },
-        });
-    } else {
-        if (produtoNovo.estoque < novaQuantidade) {
-            return NextResponse.json({ error: "Estoque insuficiente para o novo produto." }, { status: 400 });
-        }
-
-        if (produtoAntigo) {
-            await prisma.produto.update({
-                where: { id: produtoAntigo.id },
-                data: { estoque: produtoAntigo.estoque + pedidoAtual.quantidade },
+            return tx.pedido.update({
+                where: { id: pedidoId },
+                data: {
+                    cliente: validatedBody.cliente,
+                    whatsapp: validatedBody.whatsapp,
+                    emailCliente: validatedBody.emailCliente,
+                    enderecoEntrega: validatedBody.enderecoEntrega,
+                    produtoId: novoProdutoId,
+                    produtoNome: produtoNovo.nome,
+                    quantidade: novaQuantidade,
+                    valorTotal: formatCurrencyBRL(
+                        parsePriceToNumber(produtoNovo.preco) * novaQuantidade
+                    ),
+                    metodoPagamento: validatedBody.metodoPagamento,
+                    statusPagamento: validatedBody.statusPagamento,
+                    statusPedido: validatedBody.statusPedido,
+                    codigoRastreio: validatedBody.codigoRastreio,
+                    statusEntrega: validatedBody.statusEntrega,
+                    observacoes: validatedBody.observacoes,
+                },
             });
-        }
-
-        await prisma.produto.update({
-            where: { id: produtoNovo.id },
-            data: { estoque: produtoNovo.estoque - novaQuantidade },
         });
+
+        return NextResponse.json(pedidoAtualizado);
+    } catch (error) {
+        return errorResponse(error, "Não foi possível atualizar o pedido.");
     }
-
-    const pedidoAtualizado = await prisma.pedido.update({
-        where: { id: pedidoId },
-        data: {
-            cliente: validatedBody.cliente,
-            whatsapp: validatedBody.whatsapp,
-            emailCliente: validatedBody.emailCliente,
-            enderecoEntrega: validatedBody.enderecoEntrega,
-            produtoId: novoProdutoId,
-            produtoNome: produtoNovo.nome,
-            quantidade: novaQuantidade,
-            valorTotal: formatCurrencyBRL(
-                parsePriceToNumber(produtoNovo.preco) * novaQuantidade
-            ),
-            metodoPagamento: validatedBody.metodoPagamento,
-            statusPagamento: validatedBody.statusPagamento,
-            statusPedido: validatedBody.statusPedido,
-            codigoRastreio: validatedBody.codigoRastreio,
-            statusEntrega: validatedBody.statusEntrega,
-            observacoes: validatedBody.observacoes,
-        },
-    });
-
-    return NextResponse.json(pedidoAtualizado);
 }
 
 export async function DELETE(request: Request) {
-    const url = new URL(request.url);
-    const idParam = url.searchParams.get("id");
-
-    if (!idParam) {
-        return NextResponse.json({ error: "ID do pedido é obrigatório." }, { status: 400 });
+    if (!(await isAdminRequestAuthenticated(request))) {
+        return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
     }
 
-    const pedidoId = Number(idParam);
+    const pedidoId = Number(new URL(request.url).searchParams.get("id"));
     if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
         return NextResponse.json({ error: "ID do pedido inválido." }, { status: 400 });
     }
 
-    const pedido = await prisma.pedido.findUnique({
-        where: { id: pedidoId },
-    });
+    try {
+        await prisma.$transaction(async (tx) => {
+            const pedido = await tx.pedido.findUnique({ where: { id: pedidoId } });
+            if (!pedido) throw new PedidoError("Pedido não encontrado.", 404);
 
-    if (!pedido) {
-        return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
-    }
-
-    const produto = await prisma.produto.findUnique({
-        where: { id: pedido.produtoId },
-    });
-
-    if (produto) {
-        await prisma.produto.update({
-            where: { id: produto.id },
-            data: { estoque: produto.estoque + pedido.quantidade },
+            await tx.produto.update({
+                where: { id: pedido.produtoId },
+                data: { estoque: { increment: pedido.quantidade } },
+            });
+            await tx.pedido.delete({ where: { id: pedido.id } });
         });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        return errorResponse(error, "Não foi possível excluir o pedido.");
     }
-
-    await prisma.pedido.delete({
-        where: { id: pedido.id },
-    });
-
-    return NextResponse.json({ success: true });
 }

@@ -80,11 +80,7 @@ export default function EditarProdutoPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast, showToast, clearToast } = useToast();
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setIsLoading(true);
-    setErrorMessage(null);
-
     fetch(`/api/produtos?id=${id}`)
       .then(async (response) => {
         if (!response.ok) {
@@ -111,7 +107,6 @@ export default function EditarProdutoPage() {
       })
       .finally(() => setIsLoading(false));
   }, [id]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];

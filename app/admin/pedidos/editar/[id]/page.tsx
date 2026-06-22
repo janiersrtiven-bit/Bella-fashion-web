@@ -82,11 +82,7 @@ export default function EditarPedidoPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast, showToast, clearToast } = useToast();
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setIsLoading(true);
-    setErrorMessage(null);
-
     Promise.all([
       fetch("/api/produtos").then(async (response) => {
         if (!response.ok) {
@@ -136,7 +132,6 @@ export default function EditarPedidoPage() {
       })
       .finally(() => setIsLoading(false));
   }, [id]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const produtoSelecionado = produtos.find(
     (produto) => produto.id === Number(produtoId)

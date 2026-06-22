@@ -54,9 +54,6 @@ export default function ConfiguracoesAdminPage() {
     const heroPreview = useMemo(() => normalizeImagePath(config.heroImagem), [config.heroImagem]);
 
     useEffect(() => {
-        setIsLoading(true);
-        setErrorMessage(null);
-
         fetch("/api/configuracoes")
             .then(async (response) => {
                 if (!response.ok) {
