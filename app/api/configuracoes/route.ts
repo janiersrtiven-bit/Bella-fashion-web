@@ -21,6 +21,17 @@ export async function GET() {
             heroPrecoDestaque: config?.heroPrecoDestaque ?? null,
             heroWhatsappTexto: config?.heroWhatsappTexto ?? null,
             heroWhatsappNumero: config?.heroWhatsappNumero ?? null,
+            avisoTopo: config?.avisoTopo ?? null,
+            instagramUrl: config?.instagramUrl ?? null,
+            emailContato: config?.emailContato ?? null,
+            whatsappContato: config?.whatsappContato ?? null,
+            sobreTexto: config?.sobreTexto ?? null,
+            enviosTexto: config?.enviosTexto ?? null,
+            trocasTexto: config?.trocasTexto ?? null,
+            privacidadeTexto: config?.privacidadeTexto ?? null,
+            termosTexto: config?.termosTexto ?? null,
+            instrucoesPix: config?.instrucoesPix ?? null,
+            freteFixoCentavos: config?.freteFixoCentavos ?? 0,
         });
     } catch {
         return NextResponse.json({
@@ -31,6 +42,17 @@ export async function GET() {
             heroPrecoDestaque: null,
             heroWhatsappTexto: null,
             heroWhatsappNumero: null,
+            avisoTopo: null,
+            instagramUrl: null,
+            emailContato: null,
+            whatsappContato: null,
+            sobreTexto: null,
+            enviosTexto: null,
+            trocasTexto: null,
+            privacidadeTexto: null,
+            termosTexto: null,
+            instrucoesPix: null,
+            freteFixoCentavos: 0,
         });
     }
 }
@@ -67,6 +89,17 @@ export async function PUT(request: Request) {
             heroPrecoDestaque: normalizeOptional(payload.heroPrecoDestaque),
             heroWhatsappTexto: normalizeOptional(payload.heroWhatsappTexto),
             heroWhatsappNumero: normalizeOptional(payload.heroWhatsappNumero)?.replace(/\D/g, "") ?? null,
+            avisoTopo: normalizeOptional(payload.avisoTopo),
+            instagramUrl: normalizeOptional(payload.instagramUrl),
+            emailContato: normalizeOptional(payload.emailContato)?.toLowerCase() ?? null,
+            whatsappContato: normalizeOptional(payload.whatsappContato)?.replace(/\D/g, "") ?? null,
+            sobreTexto: normalizeOptional(payload.sobreTexto),
+            enviosTexto: normalizeOptional(payload.enviosTexto),
+            trocasTexto: normalizeOptional(payload.trocasTexto),
+            privacidadeTexto: normalizeOptional(payload.privacidadeTexto),
+            termosTexto: normalizeOptional(payload.termosTexto),
+            instrucoesPix: normalizeOptional(payload.instrucoesPix),
+            freteFixoCentavos: payload.freteFixoCentavos,
         });
 
         return NextResponse.json(updated);

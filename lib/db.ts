@@ -225,6 +225,17 @@ type SiteConfigInput = {
     heroPrecoDestaque?: string | null;
     heroWhatsappTexto?: string | null;
     heroWhatsappNumero?: string | null;
+    avisoTopo?: string | null;
+    instagramUrl?: string | null;
+    emailContato?: string | null;
+    whatsappContato?: string | null;
+    sobreTexto?: string | null;
+    enviosTexto?: string | null;
+    trocasTexto?: string | null;
+    privacidadeTexto?: string | null;
+    termosTexto?: string | null;
+    instrucoesPix?: string | null;
+    freteFixoCentavos?: number;
 };
 
 export async function getSiteConfig() {

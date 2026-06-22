@@ -5,7 +5,7 @@ Loja Next.js com checkout, pedidos automáticos em banco (Prisma + PostgreSQL), 
 ## Home dinâmico (sem conteúdo demo)
 
 - O Home (`/`) não usa conteúdo fixo de demonstração.
-- Hero e botão WhatsApp são configurados em `/admin/configuracoes`.
+- Hero, Instagram, canais, frete e políticas são configurados em `/admin/configuracoes`.
 - Catálogo do Home mostra somente produtos `Ativo` criados no admin.
 - Sem configuração/produtos, o Home exibe estado limpo sem foto ou preço demo.
 
@@ -40,9 +40,9 @@ Preencha no `.env`:
 ```env
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT="587"
-SMTP_USER="janierstivenrodrigueslondono@gmail.com"
+SMTP_USER="contato@sua-loja.com"
 SMTP_PASS="SUA_APP_PASSWORD_GMAIL"
-COMPANY_EMAIL="janierstivenrodrigueslondono@gmail.com"
+COMPANY_EMAIL="contato@sua-loja.com"
 ```
 
 Observação:
@@ -56,7 +56,6 @@ Preencha no `.env`:
 STRIPE_SECRET_KEY="sk_live_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
 NEXT_PUBLIC_APP_URL="https://seu-dominio.com"
-NEXT_PUBLIC_INSTAGRAM_URL="https://www.instagram.com/seu_perfil/"
 ```
 
 No painel Stripe:
@@ -73,7 +72,7 @@ Resultado:
 Preencha no `.env`:
 
 ```env
-COMPANY_WHATSAPP="11940625832"
+COMPANY_WHATSAPP="5511999999999"
 WHATSAPP_PHONE_NUMBER_ID="..."
 WHATSAPP_CLOUD_TOKEN="..."
 ```
@@ -139,4 +138,4 @@ npm run build
 Se o build passar, a aplicação está pronta para deploy.
 
 Antes de divulgar, confirme também que `NEXT_PUBLIC_APP_URL` usa o domínio HTTPS real,
-adicione o perfil oficial do Instagram e complete nos Termos os dados legais da empresa.
+publique o perfil oficial do Instagram, os canais e os textos legais pelo painel administrativo.

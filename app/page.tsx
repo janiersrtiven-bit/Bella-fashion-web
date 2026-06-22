@@ -18,7 +18,7 @@ function normalizeImagePath(value: string | null | undefined) {
   return `/produtos/${image.replace(/^\/+/, "")}`;
 }
 
-function safeInstagramUrl(value: string | undefined) {
+function safeInstagramUrl(value: string | null | undefined) {
   if (!value) return null;
 
   try {
@@ -43,19 +43,17 @@ export default async function Home() {
 
   const produtoDestaque = produtos.find((produto) => produto.estoque > 0) ?? produtos[0];
   const heroImagem = normalizeImagePath(config?.heroImagem) ?? normalizeImagePath(produtoDestaque?.imagem);
-  const heroTitulo = config?.heroTitulo?.trim() || "Vista-se de confiança";
-  const heroSubtitulo =
-    config?.heroSubtitulo?.trim() ||
-    "Bodies femininos versáteis para acompanhar você do básico ao marcante.";
-  const heroMaterial =
-    config?.heroMaterial?.trim() || "Fabricação própria · acabamento cuidadoso · atendimento próximo";
+  const heroTitulo = config?.heroTitulo?.trim() || "Bella Fashion";
+  const heroSubtitulo = config?.heroSubtitulo?.trim() || "";
+  const heroMaterial = config?.heroMaterial?.trim() || "";
   const heroPrecoDestaque = config?.heroPrecoDestaque?.trim() || produtoDestaque?.preco || "";
-  const heroWhatsappTexto = config?.heroWhatsappTexto?.trim() || "Falar no WhatsApp";
-  const heroWhatsappNumero = config?.heroWhatsappNumero?.replace(/\D/g, "") || "";
+  const heroWhatsappTexto = config?.heroWhatsappTexto?.trim() || "WhatsApp";
+  const heroWhatsappNumero =
+    config?.heroWhatsappNumero?.replace(/\D/g, "") || config?.whatsappContato?.replace(/\D/g, "") || "";
   const whatsappLink = /^\d{10,15}$/.test(heroWhatsappNumero)
     ? `https://wa.me/55${heroWhatsappNumero.replace(/^55/, "")}?text=${encodeURIComponent("Olá! Vim pelo site da Bella Fashion e quero conhecer a coleção.")}`
     : null;
-  const instagramUrl = safeInstagramUrl(process.env.NEXT_PUBLIC_INSTAGRAM_URL);
+  const instagramUrl = safeInstagramUrl(config?.instagramUrl);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
 
   const structuredData = {
@@ -73,6 +71,12 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
       />
+
+      {config?.avisoTopo && (
+        <div className="bg-purple-950 px-4 py-2 text-center text-xs font-semibold text-white sm:text-sm">
+          {config.avisoTopo}
+        </div>
+      )}
 
       <header className="sticky top-0 z-50 border-b border-purple-100 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6">
@@ -124,8 +128,8 @@ export default async function Home() {
           <div className="text-center md:text-left">
             <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-purple-200">Coleção atual</p>
             <h1 className="text-4xl font-bold leading-tight sm:text-5xl md:text-7xl">{heroTitulo}</h1>
-            <p className="mt-6 text-xl text-purple-50 md:text-2xl">{heroSubtitulo}</p>
-            <p className="mt-4 text-sm leading-relaxed text-purple-100 sm:text-base">{heroMaterial}</p>
+            {heroSubtitulo && <p className="mt-6 text-xl text-purple-50 md:text-2xl">{heroSubtitulo}</p>}
+            {heroMaterial && <p className="mt-4 text-sm leading-relaxed text-purple-100 sm:text-base">{heroMaterial}</p>}
 
             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row md:justify-start">
               <a
@@ -177,13 +181,14 @@ export default async function Home() {
         </div>
       </section>
 
-      <section aria-label="Diferenciais" className="border-b border-purple-100 bg-purple-50 px-6 py-7">
-        <div className="mx-auto grid max-w-6xl gap-6 text-center sm:grid-cols-3">
-          <div><p className="font-bold text-purple-950">Fabricação própria</p><p className="mt-1 text-sm text-gray-600">Cuidado em cada detalhe</p></div>
-          <div><p className="font-bold text-purple-950">Atendimento direto</p><p className="mt-1 text-sm text-gray-600">Suporte antes e depois da compra</p></div>
-          <div><p className="font-bold text-purple-950">Acompanhe seu pedido</p><p className="mt-1 text-sm text-gray-600">Status disponível no site</p></div>
-        </div>
-      </section>
+      {config?.sobreTexto && (
+        <section aria-label="Sobre a Bella Fashion" className="border-b border-purple-100 bg-purple-50 px-6 py-10">
+          <div className="mx-auto max-w-4xl text-center">
+            <h2 className="text-2xl font-bold text-purple-950">Sobre a Bella Fashion</h2>
+            <p className="mt-4 whitespace-pre-line leading-7 text-gray-700">{config.sobreTexto}</p>
+          </div>
+        </section>
+      )}
 
       <section id="produtos" className="scroll-mt-24 bg-white px-5 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-6xl">
@@ -243,9 +248,12 @@ export default async function Home() {
 
       <footer className="bg-purple-950 px-6 py-12 text-white">
         <div className="mx-auto grid max-w-6xl gap-8 text-center md:grid-cols-3 md:text-left">
-          <div><p className="text-2xl font-bold">Bella Fashion</p><p className="mt-2 text-sm text-purple-200">Moda feminina com identidade e cuidado.</p></div>
+          <div><p className="text-2xl font-bold">Bella Fashion</p>{config?.sobreTexto && <p className="mt-2 line-clamp-3 text-sm text-purple-200">{config.sobreTexto}</p>}</div>
           <div className="flex flex-col gap-2 text-sm text-purple-200 md:items-center">
             <Link href="/acompanhar-pedido" className="hover:text-white">Acompanhar pedido</Link>
+            <Link href="/contato" className="hover:text-white">Contato</Link>
+            <Link href="/envios" className="hover:text-white">Envios</Link>
+            <Link href="/trocas" className="hover:text-white">Trocas e devoluções</Link>
             <Link href="/politica-privacidade" className="hover:text-white">Política de Privacidade</Link>
             <Link href="/termos" className="hover:text-white">Termos de Uso</Link>
           </div>

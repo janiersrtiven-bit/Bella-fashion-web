@@ -8,51 +8,62 @@ datasource db {
 }
 
 model Produto {
-  id          Int     @id @default(autoincrement())
-  nome        String
-  imagem      String
-  preco       String
-  destaque    String
-  descricao   String
-  status      String
-  categoria   String
-  estoque     Int
+  id           Int      @id @default(autoincrement())
+  nome         String
+  imagem       String
+  preco        String
+  destaque     String
+  descricao    String
+  status       String
+  categoria    String
+  estoque      Int
   dataCadastro String?
   horaCadastro String?
-  pedidos     Pedido[]
+  pedidos      Pedido[]
 }
 
 model Pedido {
-  id             Int     @id @default(autoincrement())
-  cliente        String
-  whatsapp       String
-  emailCliente   String?
+  id              Int     @id @default(autoincrement())
+  cliente         String
+  whatsapp        String
+  emailCliente    String?
   enderecoEntrega String?
-  produtoId      Int
-  produtoNome    String
-  quantidade     Int
-  valorTotal     String
+  produtoId       Int
+  produtoNome     String
+  quantidade      Int
+  valorTotal      String
   metodoPagamento String
   statusPagamento String
-  statusPedido   String
-  codigoRastreio String?
-  statusEntrega  String
-  observacoes    String?
-  dataPedido     String
-  horaPedido     String
-  produto        Produto @relation(fields: [produtoId], references: [id])
+  statusPedido    String
+  codigoRastreio  String?
+  statusEntrega   String
+  observacoes     String?
+  dataPedido      String
+  horaPedido      String
+  produto         Produto @relation(fields: [produtoId], references: [id])
 }
 
 model ConfiguracaoSite {
-  id                Int      @id @default(autoincrement())
-  singleton         String   @unique @default("default")
-  heroImagem        String?
-  heroTitulo        String?
-  heroSubtitulo     String?
-  heroMaterial      String?
-  heroPrecoDestaque String?
-  heroWhatsappTexto String?
+  id                 Int      @id @default(autoincrement())
+  singleton          String   @unique @default("default")
+  heroImagem         String?
+  heroTitulo         String?
+  heroSubtitulo      String?
+  heroMaterial       String?
+  heroPrecoDestaque  String?
+  heroWhatsappTexto  String?
   heroWhatsappNumero String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  avisoTopo          String?
+  instagramUrl       String?
+  emailContato       String?
+  whatsappContato    String?
+  sobreTexto         String?
+  enviosTexto        String?
+  trocasTexto        String?
+  privacidadeTexto   String?
+  termosTexto        String?
+  instrucoesPix      String?
+  freteFixoCentavos  Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }

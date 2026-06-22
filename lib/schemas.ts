@@ -98,6 +98,19 @@ const optionalTrimmedString = z
         return normalized ? normalized : undefined;
     });
 
+const optionalLongText = z
+    .string()
+    .max(12000, "O texto excede o limite permitido.")
+    .optional()
+    .transform((value) => value?.trim() || undefined);
+
+const optionalHttpsUrl = z
+    .string()
+    .max(500)
+    .optional()
+    .transform((value) => value?.trim() || undefined)
+    .refine((value) => !value || /^https:\/\//i.test(value), "Use uma URL segura iniciada por https://.");
+
 export const siteConfigSchema = z.object({
     heroImagem: optionalTrimmedString.refine(
         (value) => !value || !isTempImageUrl(value),
@@ -112,6 +125,23 @@ export const siteConfigSchema = z.object({
         (value) => !value || /^\d{10,15}$/.test(value.replace(/\D/g, "")),
         "WhatsApp inválido. Use apenas números com DDD."
     ),
+    avisoTopo: optionalTrimmedString,
+    instagramUrl: optionalHttpsUrl.refine(
+        (value) => !value || /(^|\.)instagram\.com\//i.test(value),
+        "Informe um perfil válido do Instagram."
+    ),
+    emailContato: z.string().email("E-mail de contato inválido.").optional().or(z.literal("")),
+    whatsappContato: optionalTrimmedString.refine(
+        (value) => !value || /^\d{10,15}$/.test(value.replace(/\D/g, "")),
+        "WhatsApp de contato inválido."
+    ),
+    sobreTexto: optionalLongText,
+    enviosTexto: optionalLongText,
+    trocasTexto: optionalLongText,
+    privacidadeTexto: optionalLongText,
+    termosTexto: optionalLongText,
+    instrucoesPix: optionalLongText,
+    freteFixoCentavos: z.number().int().min(0).max(10_000_000).default(0),
 });
 
 export type PedidoCreateInput = z.infer<typeof pedidoCreateSchema>;
