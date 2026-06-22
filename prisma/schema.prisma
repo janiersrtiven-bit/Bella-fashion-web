@@ -8,18 +8,54 @@ datasource db {
 }
 
 model Produto {
-  id           Int      @id @default(autoincrement())
-  nome         String
-  imagem       String
-  preco        String
-  destaque     String
-  descricao    String
-  status       String
-  categoria    String
-  estoque      Int
-  dataCadastro String?
-  horaCadastro String?
-  pedidos      Pedido[]
+  id            Int               @id @default(autoincrement())
+  nome          String
+  slug          String?
+  imagem        String
+  preco         String
+  precoCentavos Int?
+  destaque      String
+  descricao     String
+  status        String
+  categoria     String
+  estoque       Int
+  dataCadastro  String?
+  horaCadastro  String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @default(now()) @updatedAt
+  pedidos       Pedido[]
+  imagens       ProdutoImagem[]
+  variantes     ProdutoVariante[]
+
+  @@index([slug])
+}
+
+model ProdutoImagem {
+  id        Int      @id @default(autoincrement())
+  produtoId Int
+  url       String
+  alt       String?
+  ordem     Int      @default(0)
+  createdAt DateTime @default(now())
+  produto   Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  @@index([produtoId, ordem])
+}
+
+model ProdutoVariante {
+  id        Int      @id @default(autoincrement())
+  produtoId Int
+  tamanho   String
+  cor       String
+  sku       String?  @unique
+  estoque   Int      @default(0)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  produto   Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  @@unique([produtoId, tamanho, cor])
+  @@index([produtoId, ativo])
 }
 
 model Pedido {

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getProdutosPublicos, getSiteConfig } from "@/lib/db";
+import { CartLink } from "@/components/cart/cart-link";
 
 export const metadata: Metadata = {
   title: "Bodies femininos com estilo e conforto",
@@ -98,6 +99,7 @@ export default async function Home() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <CartLink compact />
             <Link
               href="/acompanhar-pedido"
               className="rounded-full border border-purple-200 px-3 py-2 text-xs font-semibold text-purple-900 md:hidden"
@@ -234,7 +236,7 @@ export default async function Home() {
                         {esgotado ? (
                           <span className="rounded-full bg-gray-200 px-5 py-2 text-sm font-semibold text-gray-600">Indisponível</span>
                         ) : (
-                          <Link href={`/checkout/${produto.id}`} className="rounded-full bg-purple-800 px-5 py-2 text-sm font-semibold text-white transition hover:bg-purple-900">Comprar</Link>
+                          <Link href={`/produto/${produto.slug || produto.id}`} className="rounded-full bg-purple-800 px-5 py-2 text-sm font-semibold text-white transition hover:bg-purple-900">Ver produto</Link>
                         )}
                       </div>
                     </div>

@@ -25,6 +25,14 @@ const persistedImageSchema = z
         message: "A imagem deve ser URL persistente. blob: e data: não são permitidos.",
     });
 
+const productVariantSchema = z.object({
+    tamanho: z.string().trim().min(1, "Informe o tamanho.").max(40),
+    cor: z.string().trim().min(1, "Informe a cor.").max(60),
+    sku: z.string().trim().max(80).optional().or(z.literal("")),
+    estoque: z.number().int().min(0).max(100000),
+    ativo: z.boolean().default(true),
+});
+
 export const produtoSchema = z.object({
     nome: z.string().trim().min(2, "Informe o nome do produto.").max(120),
     imagem: persistedImageSchema,
@@ -34,6 +42,8 @@ export const produtoSchema = z.object({
     status: productStatusSchema,
     categoria: z.string().trim().min(2, "Informe a categoria do produto.").max(80),
     estoque: z.number().int().min(0, "O estoque deve ser um número inteiro igual ou maior que zero.").max(100000),
+    imagens: z.array(persistedImageSchema).max(8).optional(),
+    variantes: z.array(productVariantSchema).max(100).optional(),
 });
 
 export const produtoUpdateSchema = produtoSchema.partial();

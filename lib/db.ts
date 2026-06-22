@@ -58,6 +58,10 @@ export function parsePriceToCents(preco: string) {
 
 export async function getProdutos() {
     return prisma.produto.findMany({
+        include: {
+            imagens: { orderBy: { ordem: "asc" } },
+            variantes: { orderBy: [{ cor: "asc" }, { tamanho: "asc" }] },
+        },
         orderBy: {
             id: "asc",
         },
@@ -68,6 +72,10 @@ export async function getProdutosPublicos() {
     return prisma.produto.findMany({
         where: {
             status: "Ativo",
+        },
+        include: {
+            imagens: { orderBy: { ordem: "asc" } },
+            variantes: { where: { ativo: true }, orderBy: [{ cor: "asc" }, { tamanho: "asc" }] },
         },
         orderBy: {
             id: "asc",
@@ -80,7 +88,55 @@ export async function getProdutoById(id: number) {
         where: {
             id,
         },
+        include: {
+            imagens: { orderBy: { ordem: "asc" } },
+            variantes: { orderBy: [{ cor: "asc" }, { tamanho: "asc" }] },
+        },
     });
+}
+
+export async function getProdutoPublicoBySlugOrId(value: string) {
+    const id = Number(value);
+    return prisma.produto.findFirst({
+        where: {
+            status: "Ativo",
+            OR: [
+                ...(Number.isInteger(id) && id > 0 ? [{ id }] : []),
+                { slug: value },
+            ],
+        },
+        include: {
+            imagens: { orderBy: { ordem: "asc" } },
+            variantes: { where: { ativo: true }, orderBy: [{ cor: "asc" }, { tamanho: "asc" }] },
+        },
+    });
+}
+
+function slugifyProductName(value: string) {
+    return value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "produto";
+}
+
+async function getAvailableProductSlug(name: string, ignoreId?: number) {
+    const base = slugifyProductName(name);
+    let candidate = base;
+    let suffix = 2;
+
+    while (
+        await prisma.produto.findFirst({
+            where: { slug: candidate, ...(ignoreId ? { NOT: { id: ignoreId } } : {}) },
+            select: { id: true },
+        })
+    ) {
+        candidate = `${base}-${suffix}`;
+        suffix += 1;
+    }
+
+    return candidate;
 }
 
 export async function getPedidoById(id: number) {
@@ -102,6 +158,8 @@ export async function createProduto(data: {
     estoque: number;
     dataCadastro?: string;
     horaCadastro?: string;
+    imagens?: string[];
+    variantes?: Array<{ tamanho: string; cor: string; sku?: string; estoque: number; ativo: boolean }>;
 }) {
     const agora = new Date();
     const dataCadastro = data.dataCadastro ?? agora.toLocaleDateString("pt-BR");
@@ -110,12 +168,28 @@ export async function createProduto(data: {
         minute: "2-digit",
     });
 
+    const { imagens = [], variantes = [], ...productData } = data;
+    const slug = await getAvailableProductSlug(productData.nome);
+    const estoque = variantes.length > 0
+        ? variantes.reduce((total, item) => total + item.estoque, 0)
+        : productData.estoque;
+
     return prisma.produto.create({
         data: {
-            ...data,
+            ...productData,
+            slug,
+            precoCentavos: parsePriceToCents(productData.preco),
+            estoque,
             dataCadastro,
             horaCadastro,
+            imagens: imagens.length > 0
+                ? { create: imagens.map((url, ordem) => ({ url, ordem, alt: productData.nome })) }
+                : undefined,
+            variantes: variantes.length > 0
+                ? { create: variantes.map((item) => ({ ...item, sku: item.sku || null })) }
+                : undefined,
         },
+        include: { imagens: { orderBy: { ordem: "asc" } }, variantes: true },
     });
 }
 
@@ -130,10 +204,35 @@ export async function updateProduto(id: number, data: Partial<{
     estoque: number;
     dataCadastro: string;
     horaCadastro: string;
+    imagens: string[];
+    variantes: Array<{ tamanho: string; cor: string; sku?: string; estoque: number; ativo: boolean }>;
 }>) {
-    return prisma.produto.update({
-        where: { id },
-        data,
+    const { imagens, variantes, ...productData } = data;
+    const slug = productData.nome ? await getAvailableProductSlug(productData.nome, id) : undefined;
+    const estoque = variantes
+        ? variantes.reduce((total, item) => total + item.estoque, 0)
+        : productData.estoque;
+
+    return prisma.$transaction(async (tx) => {
+        if (imagens) await tx.produtoImagem.deleteMany({ where: { produtoId: id } });
+        if (variantes) await tx.produtoVariante.deleteMany({ where: { produtoId: id } });
+
+        return tx.produto.update({
+            where: { id },
+            data: {
+                ...productData,
+                ...(slug ? { slug } : {}),
+                ...(productData.preco ? { precoCentavos: parsePriceToCents(productData.preco) } : {}),
+                ...(estoque !== undefined ? { estoque } : {}),
+                ...(imagens
+                    ? { imagens: { create: imagens.map((url, ordem) => ({ url, ordem, alt: productData.nome })) } }
+                    : {}),
+                ...(variantes
+                    ? { variantes: { create: variantes.map((item) => ({ ...item, sku: item.sku || null })) } }
+                    : {}),
+            },
+            include: { imagens: { orderBy: { ordem: "asc" } }, variantes: true },
+        });
     });
 }
 
