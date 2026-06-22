@@ -102,6 +102,14 @@ export default async function ContaPedidosPage() {
                     <p className="mt-1 text-sm text-gray-600">{pedido.enderecoEntrega}</p>
                   </div>
                 ) : null}
+                <div className="border-t border-purple-100 px-6 py-5">
+                  <Link
+                    href={`/conta/pedidos/${pedido.id}`}
+                    className="inline-flex rounded-full bg-purple-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-purple-800"
+                  >
+                    Ver detalhes
+                  </Link>
+                </div>
               </article>
             ))
           )}
