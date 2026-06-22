@@ -26,6 +26,7 @@ model Produto {
   pedidos       Pedido[]
   imagens       ProdutoImagem[]
   variantes     ProdutoVariante[]
+  pedidoItens   PedidoItem[]
 
   @@index([slug])
 }
@@ -53,6 +54,7 @@ model ProdutoVariante {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   produto   Produto  @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+  pedidoItens PedidoItem[]
 
   @@unique([produtoId, tamanho, cor])
   @@index([produtoId, ativo])
@@ -76,7 +78,82 @@ model Pedido {
   observacoes     String?
   dataPedido      String
   horaPedido      String
-  produto         Produto @relation(fields: [produtoId], references: [id])
+  numeroPublico    String?
+  subtotalCentavos Int?
+  freteCentavos    Int      @default(0)
+  totalCentavos    Int?
+  estoqueReservado Boolean  @default(false)
+  stripeSessionId  String?
+  stripePaymentIntentId String?
+  expiresAt        DateTime?
+  clienteId        Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
+  produto          Produto @relation(fields: [produtoId], references: [id])
+  clienteConta     Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  itens            PedidoItem[]
+
+  @@index([numeroPublico])
+  @@index([clienteId, createdAt])
+}
+
+model PedidoItem {
+  id                    Int              @id @default(autoincrement())
+  pedidoId              Int
+  produtoId             Int?
+  varianteId            Int?
+  nome                  String
+  sku                   String?
+  tamanho               String?
+  cor                   String?
+  quantidade            Int
+  precoUnitarioCentavos Int
+  totalCentavos         Int
+  createdAt             DateTime         @default(now())
+  pedido                Pedido           @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  produto               Produto?         @relation(fields: [produtoId], references: [id], onDelete: SetNull)
+  variante              ProdutoVariante? @relation(fields: [varianteId], references: [id], onDelete: SetNull)
+
+  @@index([pedidoId])
+  @@index([produtoId])
+}
+
+model Cliente {
+  id           Int               @id @default(autoincrement())
+  nome         String
+  email        String            @unique
+  whatsapp     String
+  passwordHash String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  pedidos      Pedido[]
+  enderecos    EnderecoCliente[]
+  sessoes      ClienteSessao[]
+}
+
+model EnderecoCliente {
+  id        Int      @id @default(autoincrement())
+  clienteId Int
+  rotulo    String   @default("Principal")
+  endereco  String
+  principal Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId])
+}
+
+model ClienteSessao {
+  id        Int      @id @default(autoincrement())
+  clienteId Int
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId])
+  @@index([expiresAt])
 }
 
 model ConfiguracaoSite {

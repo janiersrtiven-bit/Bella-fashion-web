@@ -154,5 +154,39 @@ export const siteConfigSchema = z.object({
     freteFixoCentavos: z.number().int().min(0).max(10_000_000).default(0),
 });
 
+export const checkoutPedidoSchema = z.object({
+    cliente: z.string().trim().min(2, "Informe o nome completo.").max(120),
+    whatsapp: z.string().transform((value) => value.replace(/\D/g, "")).refine((value) => whatsappRegex.test(value), "WhatsApp inválido."),
+    emailCliente: z.string().trim().email("E-mail inválido.").max(200),
+    enderecoEntrega: z.string().trim().min(12, "Informe o endereço completo e CEP.").max(500),
+    observacoes: z.string().trim().max(500).optional().transform((value) => value || undefined),
+    metodoPagamento: z.enum(["Pix", "Cartão"]),
+    itens: z.array(z.object({
+        produtoId: z.number().int().positive(),
+        varianteId: z.number().int().positive().nullable().optional(),
+        quantidade: z.number().int().min(1).max(10),
+    })).min(1, "Sua sacola está vazia.").max(30),
+    aceitouTermos: z.literal(true, { errorMap: () => ({ message: "Aceite os termos para continuar." }) }),
+});
+
+export const clienteCadastroSchema = z.object({
+    nome: z.string().trim().min(2).max(120),
+    email: z.string().trim().email("E-mail inválido.").max(200).transform((value) => value.toLowerCase()),
+    whatsapp: z.string().transform((value) => value.replace(/\D/g, "")).refine((value) => whatsappRegex.test(value), "WhatsApp inválido."),
+    password: z.string().min(8, "Use uma senha com pelo menos 8 caracteres.").max(128),
+    endereco: z.string().trim().max(500).optional().transform((value) => value || undefined),
+});
+
+export const clienteLoginSchema = z.object({
+    email: z.string().trim().email("E-mail inválido.").transform((value) => value.toLowerCase()),
+    password: z.string().min(1).max(128),
+});
+
+export const clienteUpdateSchema = z.object({
+    nome: z.string().trim().min(2).max(120),
+    whatsapp: z.string().transform((value) => value.replace(/\D/g, "")).refine((value) => whatsappRegex.test(value), "WhatsApp inválido."),
+    endereco: z.string().trim().max(500).optional().transform((value) => value || undefined),
+});
+
 export type PedidoCreateInput = z.infer<typeof pedidoCreateSchema>;
 export type PedidoUpdateInput = z.infer<typeof pedidoUpdateSchema>;
