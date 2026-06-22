@@ -51,6 +51,21 @@ export default async function ContaPage() {
             </p>
           </section>
         </div>
+
+        <div className="mt-8 rounded-3xl border border-purple-100 bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-bold text-purple-950">Meus pedidos</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Consulte o histórico de compras feitas com o e-mail de login.
+          </p>
+          <div className="mt-6">
+            <Link
+              href="/conta/pedidos"
+              className="inline-flex items-center justify-center rounded-full bg-purple-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-purple-800"
+            >
+              Ver meus pedidos
+            </Link>
+          </div>
+        </div>
       </div>
     </main>
   );
