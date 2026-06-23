@@ -48,6 +48,12 @@ export const produtoSchema = z.object({
 
 export const produtoUpdateSchema = produtoSchema.partial();
 
+const pedidoItemSchema = z.object({
+    produtoId: z.number().int().positive(),
+    varianteId: z.number().int().positive().nullable().optional(),
+    quantidade: z.number().int().min(1).max(1000),
+});
+
 export const pedidoCreateSchema = z.object({
     cliente: z.string().trim().min(2, "Informe o nome do cliente.").max(120),
     whatsapp: z
@@ -66,9 +72,10 @@ export const pedidoCreateSchema = z.object({
         .string().max(500)
         .optional()
         .transform((value) => (value?.trim() ? value : undefined)),
-    produtoId: z.number().int().positive(),
-    quantidade: z.number().int().positive(),
-    valorTotal: z.string().min(1, "Informe o valor total do pedido.").max(40),
+    produtoId: z.number().int().positive().optional(),
+    quantidade: z.number().int().positive().optional(),
+    valorTotal: z.string().min(1, "Informe o valor total do pedido.").max(40).optional(),
+    itens: z.array(pedidoItemSchema).min(1).optional(),
     metodoPagamento: paymentMethodSchema.default("Pix"),
     statusPagamento: z.string().default("Aguardando pagamento"),
     statusPedido: z.string().default("Pedido recebido"),
@@ -77,6 +84,42 @@ export const pedidoCreateSchema = z.object({
         .string().max(500)
         .optional()
         .transform((value) => (value?.trim() ? value : undefined)),
+}).superRefine((data, ctx) => {
+    const hasItems = Array.isArray(data.itens) && data.itens.length > 0;
+    const hasLegacy = data.produtoId != null || data.quantidade != null;
+
+    if (!hasItems && !hasLegacy) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Informe produtoId/quantidade ou itens para criar o pedido.",
+        });
+        return;
+    }
+
+    if (hasItems) {
+        return;
+    }
+
+    if (data.produtoId == null) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Informe o produtoId.",
+        });
+    }
+
+    if (data.quantidade == null) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Informe a quantidade.",
+        });
+    }
+
+    if (!data.valorTotal) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Informe o valor total do pedido.",
+        });
+    }
 });
 
 export const pedidoUpdateSchema = z.object({

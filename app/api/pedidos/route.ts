@@ -30,6 +30,10 @@ function formatCurrencyBRL(value: number) {
     }).format(value);
 }
 
+function formatCentsToCurrencyBRL(cents: number) {
+    return formatCurrencyBRL(cents / 100);
+}
+
 function publicPedido(pedido: {
     id: number;
     cliente: string;
@@ -156,26 +160,161 @@ export async function POST(request: Request) {
         const currentCustomer = await getCurrentCustomer();
 
         const pedido = await prisma.$transaction(async (tx) => {
-            const produto = await tx.produto.findUnique({
-                where: { id: validatedPedido.produtoId },
-            });
+            const isMultiItemOrder = Array.isArray(validatedPedido.itens) && validatedPedido.itens.length > 0;
 
-            if (!produto || (!isAdmin && produto.status !== "Ativo")) {
-                throw new PedidoError("Produto não encontrado.", 404);
+            if (!isMultiItemOrder) {
+                const produto = await tx.produto.findUnique({
+                    where: { id: validatedPedido.produtoId ?? 0 },
+                });
+
+                if (!produto || (!isAdmin && produto.status !== "Ativo")) {
+                    throw new PedidoError("Produto não encontrado.", 404);
+                }
+
+                const reserva = await tx.produto.updateMany({
+                    where: {
+                        id: produto.id,
+                        estoque: { gte: validatedPedido.quantidade ?? 0 },
+                        ...(isAdmin ? {} : { status: "Ativo" }),
+                    },
+                    data: { estoque: { decrement: validatedPedido.quantidade ?? 0 } },
+                });
+
+                if (reserva.count !== 1) {
+                    throw new PedidoError("Estoque insuficiente para esta quantidade.");
+                }
+
+                return tx.pedido.create({
+                    data: {
+                        cliente: validatedPedido.cliente.trim(),
+                        whatsapp: validatedPedido.whatsapp,
+                        emailCliente: validatedPedido.emailCliente ?? currentCustomer?.email,
+                        enderecoEntrega: validatedPedido.enderecoEntrega,
+                        ...(currentCustomer ? { clienteId: currentCustomer.id } : {}),
+                        produtoId: produto.id,
+                        produtoNome: produto.nome,
+                        quantidade: validatedPedido.quantidade ?? 0,
+                        valorTotal: formatCurrencyBRL(
+                            (produto.precoCentavos ?? Math.round(parsePriceToNumber(produto.preco) * 100)) *
+                                (validatedPedido.quantidade ?? 0) / 100
+                        ),
+                        subtotalCentavos:
+                            (produto.precoCentavos ?? Math.round(parsePriceToNumber(produto.preco) * 100)) *
+                            (validatedPedido.quantidade ?? 0),
+                        freteCentavos: 0,
+                        totalCentavos:
+                            (produto.precoCentavos ?? Math.round(parsePriceToNumber(produto.preco) * 100)) *
+                            (validatedPedido.quantidade ?? 0),
+                        metodoPagamento: validatedPedido.metodoPagamento,
+                        statusPagamento: isAdmin
+                            ? validatedPedido.statusPagamento
+                            : "Aguardando pagamento",
+                        statusPedido: isAdmin ? validatedPedido.statusPedido : "Pedido recebido",
+                        statusEntrega: isAdmin
+                            ? validatedPedido.statusEntrega
+                            : "Aguardando envio",
+                        observacoes: validatedPedido.observacoes,
+                        dataPedido: now.toLocaleDateString("pt-BR"),
+                        horaPedido: now.toLocaleTimeString("pt-BR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        }),
+                    },
+                });
             }
 
-            const reserva = await tx.produto.updateMany({
-                where: {
-                    id: produto.id,
-                    estoque: { gte: validatedPedido.quantidade },
-                    ...(isAdmin ? {} : { status: "Ativo" }),
-                },
-                data: { estoque: { decrement: validatedPedido.quantidade } },
-            });
+            const orderItems: Array<{
+                produto: { id: number; nome: string; precoCentavos: number | null };
+                variante: { id: number; sku: string | null; tamanho: string | null; cor: string | null } | null;
+                quantity: number;
+                unitPriceCents: number;
+                totalCentavos: number;
+                name: string;
+            }> = [];
 
-            if (reserva.count !== 1) {
-                throw new PedidoError("Estoque insuficiente para esta quantidade.");
+            let subtotalCentavos = 0;
+            const itens = validatedPedido.itens ?? [];
+
+            for (const item of itens) {
+                const produto = await tx.produto.findUnique({
+                    where: { id: item.produtoId },
+                });
+
+                if (!produto || (!isAdmin && produto.status !== "Ativo")) {
+                    throw new PedidoError("Produto não encontrado.", 404);
+                }
+
+                const unitPriceCents =
+                    produto.precoCentavos ?? Math.round(parsePriceToNumber(produto.preco) * 100);
+
+                let variante: { id: number; sku: string | null; tamanho: string | null; cor: string | null } | null = null;
+                if (item.varianteId != null) {
+                    const produtoVariante = await tx.produtoVariante.findUnique({
+                        where: { id: item.varianteId },
+                    });
+
+                    if (
+                        !produtoVariante ||
+                        produtoVariante.produtoId !== produto.id ||
+                        (!isAdmin && !produtoVariante.ativo)
+                    ) {
+                        throw new PedidoError("Produto não encontrado.", 404);
+                    }
+
+                    variante = {
+                        id: produtoVariante.id,
+                        sku: produtoVariante.sku,
+                        tamanho: produtoVariante.tamanho,
+                        cor: produtoVariante.cor,
+                    };
+
+                    const reservaVariante = await tx.produtoVariante.updateMany({
+                        where: {
+                            id: item.varianteId,
+                            estoque: { gte: item.quantidade },
+                            ...(isAdmin ? {} : { ativo: true }),
+                        },
+                        data: { estoque: { decrement: item.quantidade } },
+                    });
+
+                    if (reservaVariante.count !== 1) {
+                        throw new PedidoError("Estoque insuficiente para esta quantidade.");
+                    }
+                }
+
+                const reservaProduto = await tx.produto.updateMany({
+                    where: {
+                        id: produto.id,
+                        estoque: { gte: item.quantidade },
+                        ...(isAdmin ? {} : { status: "Ativo" }),
+                    },
+                    data: { estoque: { decrement: item.quantidade } },
+                });
+
+                if (reservaProduto.count !== 1) {
+                    throw new PedidoError("Estoque insuficiente para esta quantidade.");
+                }
+
+                const totalCentavos = unitPriceCents * item.quantidade;
+                subtotalCentavos += totalCentavos;
+
+                const itemName = variante
+                    ? `${produto.nome} (${variante.cor} · ${variante.tamanho})`
+                    : produto.nome;
+
+                orderItems.push({
+                    produto,
+                    variante,
+                    quantity: item.quantidade,
+                    unitPriceCents,
+                    totalCentavos,
+                    name: itemName,
+                });
             }
+
+            const freteCentavos = 0;
+            const totalCentavos = subtotalCentavos + freteCentavos;
+            const firstItem = orderItems[0];
 
             return tx.pedido.create({
                 data: {
@@ -184,12 +323,13 @@ export async function POST(request: Request) {
                     emailCliente: validatedPedido.emailCliente ?? currentCustomer?.email,
                     enderecoEntrega: validatedPedido.enderecoEntrega,
                     ...(currentCustomer ? { clienteId: currentCustomer.id } : {}),
-                    produtoId: produto.id,
-                    produtoNome: produto.nome,
-                    quantidade: validatedPedido.quantidade,
-                    valorTotal: formatCurrencyBRL(
-                        parsePriceToNumber(produto.preco) * validatedPedido.quantidade
-                    ),
+                    produtoId: firstItem.produto.id,
+                    produtoNome: firstItem.name,
+                    quantidade: firstItem.quantity,
+                    valorTotal: formatCentsToCurrencyBRL(totalCentavos),
+                    subtotalCentavos,
+                    freteCentavos,
+                    totalCentavos,
                     metodoPagamento: validatedPedido.metodoPagamento,
                     statusPagamento: isAdmin
                         ? validatedPedido.statusPagamento
@@ -204,6 +344,19 @@ export async function POST(request: Request) {
                         hour: "2-digit",
                         minute: "2-digit",
                     }),
+                    itens: {
+                        create: orderItems.map((orderItem) => ({
+                            produtoId: orderItem.produto.id,
+                            varianteId: orderItem.variante?.id,
+                            nome: orderItem.name,
+                            sku: orderItem.variante?.sku,
+                            tamanho: orderItem.variante?.tamanho,
+                            cor: orderItem.variante?.cor,
+                            quantidade: orderItem.quantity,
+                            precoUnitarioCentavos: orderItem.unitPriceCents,
+                            totalCentavos: orderItem.totalCentavos,
+                        })),
+                    },
                 },
             });
         });
