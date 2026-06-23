@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getPedidoById, parsePriceToCents } from "@/lib/db";
+import { parsePriceToCents, prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +52,10 @@ export async function POST(request: Request) {
 
     let pedido;
     try {
-        pedido = await getPedidoById(pedidoId);
+        pedido = await prisma.pedido.findUnique({
+            where: { id: pedidoId },
+            include: { itens: true },
+        });
     } catch {
         return NextResponse.json(
             { error: "Serviço de pedidos temporariamente indisponível." },
@@ -67,10 +70,34 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Este pedido já foi pago." }, { status: 409 });
     }
 
-    const amountInCents = parsePriceToCents(pedido.valorTotal);
+    const amountInCents =
+        typeof pedido.totalCentavos === "number" && pedido.totalCentavos > 0
+            ? pedido.totalCentavos
+            : parsePriceToCents(pedido.valorTotal);
     if (amountInCents <= 0) {
         return NextResponse.json({ error: "Valor do pedido inválido." }, { status: 400 });
     }
+
+    const lineItems =
+        pedido.itens && pedido.itens.length > 0
+            ? pedido.itens.map((item) => ({
+                  price_data: {
+                      currency: "brl",
+                      product_data: { name: item.nome },
+                      unit_amount: item.precoUnitarioCentavos,
+                  },
+                  quantity: item.quantidade,
+              }))
+            : [
+                  {
+                      price_data: {
+                          currency: "brl",
+                          product_data: { name: pedido.produtoNome },
+                          unit_amount: amountInCents,
+                      },
+                      quantity: 1,
+                  },
+              ];
 
     const stripe = new Stripe(stripeSecretKey, {
         apiVersion: "2026-05-27.dahlia",
@@ -80,16 +107,7 @@ export async function POST(request: Request) {
     try {
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
-            line_items: [
-                {
-                    price_data: {
-                        currency: "brl",
-                        product_data: { name: pedido.produtoNome },
-                        unit_amount: amountInCents,
-                    },
-                    quantity: 1,
-                },
-            ],
+            line_items: lineItems,
             mode: "payment",
             client_reference_id: String(pedido.id),
             customer_email: pedido.emailCliente || undefined,
