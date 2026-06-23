@@ -57,7 +57,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true });
     }
 
-    const expectedAmount = parsePriceToCents(pedidoAtual.valorTotal);
+    const expectedAmount =
+        typeof pedidoAtual.totalCentavos === "number" && pedidoAtual.totalCentavos > 0
+            ? pedidoAtual.totalCentavos
+            : parsePriceToCents(pedidoAtual.valorTotal);
     if (
         session.currency?.toLowerCase() !== "brl" ||
         session.amount_total !== expectedAmount ||
