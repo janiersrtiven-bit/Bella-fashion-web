@@ -158,6 +158,10 @@ export async function POST(request: Request) {
 
     try {
         const currentCustomer = await getCurrentCustomer();
+        const pedidoClienteData = {
+            emailCliente: validatedPedido.emailCliente ?? currentCustomer?.email,
+            ...(currentCustomer ? { clienteId: currentCustomer.id } : {}),
+        };
 
         const pedido = await prisma.$transaction(async (tx) => {
             const isMultiItemOrder = Array.isArray(validatedPedido.itens) && validatedPedido.itens.length > 0;
@@ -188,9 +192,8 @@ export async function POST(request: Request) {
                     data: {
                         cliente: validatedPedido.cliente.trim(),
                         whatsapp: validatedPedido.whatsapp,
-                        emailCliente: validatedPedido.emailCliente ?? currentCustomer?.email,
                         enderecoEntrega: validatedPedido.enderecoEntrega,
-                        ...(currentCustomer ? { clienteId: currentCustomer.id } : {}),
+                        ...pedidoClienteData,
                         produtoId: produto.id,
                         produtoNome: produto.nome,
                         quantidade: validatedPedido.quantidade ?? 0,
@@ -320,9 +323,8 @@ export async function POST(request: Request) {
                 data: {
                     cliente: validatedPedido.cliente.trim(),
                     whatsapp: validatedPedido.whatsapp,
-                    emailCliente: validatedPedido.emailCliente ?? currentCustomer?.email,
                     enderecoEntrega: validatedPedido.enderecoEntrega,
-                    ...(currentCustomer ? { clienteId: currentCustomer.id } : {}),
+                    ...pedidoClienteData,
                     produtoId: firstItem.produto.id,
                     produtoNome: firstItem.name,
                     quantidade: firstItem.quantity,

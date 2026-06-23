@@ -36,7 +36,8 @@ export default async function PedidoDetalhePage({ params }: PageProps) {
     redirect("/conta/login");
   }
 
-  const pedidoId = Number(params.id);
+  const resolvedParams = await params;
+  const pedidoId = Number(resolvedParams.id);
   if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
     notFound();
   }
