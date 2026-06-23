@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { getTrackingUrl } from "@/lib/shipping";
 
 type Pedido = {
   id: number;
@@ -17,6 +18,11 @@ type Pedido = {
   enderecoEntrega?: string;
   dataPedido?: string;
   horaPedido?: string;
+  itens?: Array<{
+    id: number;
+    nome: string;
+    quantidade: number;
+  }>;
 };
 
 function statusClasse(status: string) {
@@ -135,7 +141,11 @@ export default function AcompanharPedidoPage() {
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div>
                 <p className="text-sm font-semibold text-purple-500">Pedido #{pedido.id}</p>
-                <h2 className="mt-2 text-3xl font-bold text-purple-950">{pedido.produtoNome}</h2>
+                <h2 className="mt-2 text-3xl font-bold text-purple-950">
+                  {pedido.itens && pedido.itens.length > 1
+                    ? `${pedido.itens.length} produtos`
+                    : pedido.produtoNome}
+                </h2>
                 <p className="mt-2 text-gray-600">Cliente: {pedido.cliente}</p>
               </div>
               <div className="rounded-2xl bg-purple-50 px-5 py-4 sm:text-right">
@@ -162,7 +172,9 @@ export default function AcompanharPedidoPage() {
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-purple-100 p-5">
                 <p className="text-sm font-semibold text-gray-500">Quantidade e pagamento</p>
-                <p className="mt-2 text-gray-700">{pedido.quantidade} un. · {pedido.metodoPagamento}</p>
+                <p className="mt-2 text-gray-700">
+                  {(pedido.itens?.reduce((total, item) => total + item.quantidade, 0) || pedido.quantidade)} un. · {pedido.metodoPagamento}
+                </p>
               </div>
               <div className="rounded-2xl border border-purple-100 p-5">
                 <p className="text-sm font-semibold text-gray-500">Data do pedido</p>
@@ -171,11 +183,26 @@ export default function AcompanharPedidoPage() {
             </div>
 
             <div className="mt-6 rounded-2xl border border-purple-100 p-5">
+              <p className="text-sm font-semibold text-gray-500">Produtos</p>
+              <div className="mt-3 space-y-3">
+                {(pedido.itens?.length
+                  ? pedido.itens
+                  : [{ id: 0, nome: pedido.produtoNome, quantidade: pedido.quantidade }]
+                ).map((item) => (
+                  <div key={item.id} className="rounded-2xl bg-purple-50 p-4">
+                    <p className="font-semibold text-purple-950">{item.nome}</p>
+                    <p className="mt-1 text-sm text-gray-600">Quantidade: {item.quantidade}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-purple-100 p-5">
               <p className="text-sm font-semibold text-gray-500">Código de rastreio</p>
               <p className="mt-2 font-bold text-purple-950">{pedido.codigoRastreio || "Ainda não informado"}</p>
-              {pedido.codigoRastreio && (
+              {getTrackingUrl(pedido.codigoRastreio) && (
                 <a
-                  href="https://rastreamento.correios.com.br/app/index.php"
+                  href={getTrackingUrl(pedido.codigoRastreio) || "#"}
                   target="_blank"
                   rel="noreferrer"
                   className="mt-4 inline-block rounded-full bg-purple-800 px-6 py-3 text-sm font-semibold text-white hover:bg-purple-900"

@@ -78,7 +78,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Valor do pedido inválido." }, { status: 400 });
     }
 
-    const lineItems =
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
         pedido.itens && pedido.itens.length > 0
             ? pedido.itens.map((item) => ({
                   price_data: {
@@ -98,6 +98,33 @@ export async function POST(request: Request) {
                       quantity: 1,
                   },
               ];
+
+    const lineItemsSubtotalInCents = lineItems.reduce((total, item) => {
+        const unitAmount =
+            typeof item.price_data?.unit_amount === "number"
+                ? item.price_data.unit_amount
+                : 0;
+        return total + unitAmount * (item.quantity || 1);
+    }, 0);
+
+    const shippingInCents = amountInCents - lineItemsSubtotalInCents;
+    if (shippingInCents < 0) {
+        return NextResponse.json(
+            { error: "Total do pedido menor que a soma dos itens." },
+            { status: 400 }
+        );
+    }
+
+    if (shippingInCents > 0) {
+        lineItems.push({
+            price_data: {
+                currency: "brl",
+                product_data: { name: "Frete" },
+                unit_amount: shippingInCents,
+            },
+            quantity: 1,
+        });
+    }
 
     const stripe = new Stripe(stripeSecretKey, {
         apiVersion: "2026-05-27.dahlia",
@@ -129,7 +156,12 @@ export async function POST(request: Request) {
         if (session.id) {
             await prisma.pedido.update({
                 where: { id: pedido.id },
-                data: { stripeSessionId: session.id },
+                data: {
+                    stripeSessionId: session.id,
+                    ...(session.expires_at
+                        ? { expiresAt: new Date(session.expires_at * 1000) }
+                        : {}),
+                },
             });
         }
 

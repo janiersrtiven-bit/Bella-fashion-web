@@ -22,6 +22,11 @@ type Pedido = {
   observacoes?: string;
   dataPedido: string;
   horaPedido: string;
+  itens?: Array<{
+    id: number;
+    nome: string;
+    quantidade: number;
+  }>;
 };
 
 type Produto = {
@@ -74,6 +79,8 @@ export default function EditarPedidoPage() {
   const [codigoRastreio, setCodigoRastreio] = useState("");
   const [statusEntrega, setStatusEntrega] = useState("Aguardando envio");
   const [observacoes, setObservacoes] = useState("");
+  const [pedidoItens, setPedidoItens] = useState<Pedido["itens"]>([]);
+  const [valorTotalOriginal, setValorTotalOriginal] = useState("");
 
   const [dataPedidoOriginal, setDataPedidoOriginal] = useState("");
   const [horaPedidoOriginal, setHoraPedidoOriginal] = useState("");
@@ -122,6 +129,8 @@ export default function EditarPedidoPage() {
         setCodigoRastreio(pedido.codigoRastreio || "");
         setStatusEntrega(pedido.statusEntrega || "Aguardando envio");
         setObservacoes(pedido.observacoes || "");
+        setPedidoItens(pedido.itens || []);
+        setValorTotalOriginal(pedido.valorTotal || "");
 
         setDataPedidoOriginal(pedido.dataPedido || "");
         setHoraPedidoOriginal(pedido.horaPedido || "");
@@ -138,13 +147,14 @@ export default function EditarPedidoPage() {
   );
 
   const quantidadeNumero = Number(quantidade);
+  const isMultiproduto = (pedidoItens?.length || 0) > 1;
 
   const valorUnitario = produtoSelecionado
     ? precoParaNumero(produtoSelecionado.preco)
     : 0;
 
   const valorTotal =
-    produtoSelecionado && quantidadeNumero > 0
+    !isMultiproduto && produtoSelecionado && quantidadeNumero > 0
       ? valorUnitario * quantidadeNumero
       : 0;
 
@@ -161,12 +171,12 @@ export default function EditarPedidoPage() {
       return;
     }
 
-    if (!produtoSelecionado) {
+    if (!isMultiproduto && !produtoSelecionado) {
       showToast("Selecione um produto.", "error");
       return;
     }
 
-    if (!Number.isInteger(quantidadeNumero) || quantidadeNumero <= 0) {
+    if (!isMultiproduto && (!Number.isInteger(quantidadeNumero) || quantidadeNumero <= 0)) {
       showToast("Preencha uma quantidade válida.", "error");
       return;
     }
@@ -180,10 +190,12 @@ export default function EditarPedidoPage() {
       whatsapp: whatsappLimpo,
       emailCliente: emailCliente.trim(),
       enderecoEntrega: enderecoEntrega.trim(),
-      produtoId: produtoSelecionado.id,
-      produtoNome: produtoSelecionado.nome,
-      quantidade: quantidadeNumero,
-      valorTotal: formatarMoeda(valorTotal),
+      produtoId: produtoSelecionado?.id || Number(produtoId),
+      produtoNome: produtoSelecionado?.nome || "Múltiplos produtos",
+      quantidade: isMultiproduto
+        ? pedidoItens?.reduce((total, item) => total + item.quantidade, 0) || quantidadeNumero
+        : quantidadeNumero,
+      valorTotal: isMultiproduto ? valorTotalOriginal : formatarMoeda(valorTotal),
       metodoPagamento,
       statusPagamento,
       statusPedido,
@@ -206,9 +218,13 @@ export default function EditarPedidoPage() {
           whatsapp: pedidoAtualizado.whatsapp,
           emailCliente: pedidoAtualizado.emailCliente || undefined,
           enderecoEntrega: pedidoAtualizado.enderecoEntrega || undefined,
-          produtoId: pedidoAtualizado.produtoId,
-          quantidade: pedidoAtualizado.quantidade,
-          valorTotal: pedidoAtualizado.valorTotal,
+          ...(isMultiproduto
+            ? {}
+            : {
+                produtoId: pedidoAtualizado.produtoId,
+                quantidade: pedidoAtualizado.quantidade,
+                valorTotal: pedidoAtualizado.valorTotal,
+              }),
           metodoPagamento: pedidoAtualizado.metodoPagamento,
           statusPagamento: pedidoAtualizado.statusPagamento,
           statusPedido: pedidoAtualizado.statusPedido,
@@ -363,6 +379,7 @@ export default function EditarPedidoPage() {
               <select
                 value={produtoId}
                 onChange={(event) => setProdutoId(event.target.value)}
+                disabled={isMultiproduto}
                 className="w-full rounded-2xl border border-purple-100 px-4 py-3 outline-none focus:border-purple-700"
               >
                 <option value="">Selecione um produto</option>
@@ -385,9 +402,32 @@ export default function EditarPedidoPage() {
                 step="1"
                 value={quantidade}
                 onChange={(event) => setQuantidade(event.target.value)}
+                disabled={isMultiproduto}
                 className="w-full rounded-2xl border border-purple-100 px-4 py-3 outline-none focus:border-purple-700"
               />
             </div>
+
+            {isMultiproduto ? (
+              <div className="rounded-3xl border border-purple-100 bg-purple-50 p-5 md:col-span-2">
+                <p className="text-sm font-semibold text-purple-950">
+                  Pedido multiproduto
+                </p>
+                <p className="mt-2 text-sm text-gray-600">
+                  Produtos e quantidades ficam bloqueados nesta tela. Atualize
+                  pagamento, preparo, envio, rastreio ou entrega.
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {pedidoItens?.map((item) => (
+                    <div key={item.id} className="rounded-2xl bg-white p-4">
+                      <p className="font-semibold text-purple-950">{item.nome}</p>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Quantidade: {item.quantidade}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div>
               <label className="mb-2 block text-sm font-semibold text-purple-950">
@@ -482,7 +522,7 @@ export default function EditarPedidoPage() {
                 Valor total atualizado
               </p>
               <p className="mt-2 text-3xl font-bold text-purple-950">
-                {formatarMoeda(valorTotal)}
+                {isMultiproduto ? valorTotalOriginal : formatarMoeda(valorTotal)}
               </p>
             </div>
           </div>

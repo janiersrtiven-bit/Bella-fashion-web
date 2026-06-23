@@ -14,6 +14,11 @@ type Pedido = {
     statusPagamento: string;
     statusPedido: string;
     statusEntrega: string;
+    itens?: Array<{
+        id: number;
+        nome: string;
+        quantidade: number;
+    }>;
 };
 
 type AccessData = { id: number; whatsapp: string };
@@ -96,10 +101,19 @@ export default function PedidoSucessoPage() {
 
                         <div className="grid gap-5 sm:grid-cols-2">
                             <section className="rounded-3xl border border-purple-100 p-5">
-                                <h2 className="font-bold text-purple-950">Produto</h2>
-                                <p className="mt-2 text-gray-600">{pedido.produtoNome}</p>
-                                <p className="text-gray-600">Quantidade: {pedido.quantidade}</p>
-                                <p className="mt-2 font-bold text-purple-950">{pedido.valorTotal}</p>
+                                <h2 className="font-bold text-purple-950">Produtos</h2>
+                                <div className="mt-3 space-y-3">
+                                    {(pedido.itens?.length
+                                        ? pedido.itens
+                                        : [{ id: 0, nome: pedido.produtoNome, quantidade: pedido.quantidade }]
+                                    ).map((item) => (
+                                        <div key={item.id} className="rounded-2xl bg-purple-50 p-3">
+                                            <p className="text-gray-700">{item.nome}</p>
+                                            <p className="text-sm text-gray-600">Quantidade: {item.quantidade}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="mt-3 font-bold text-purple-950">{pedido.valorTotal}</p>
                             </section>
                             <section className="rounded-3xl border border-purple-100 p-5">
                                 <h2 className="font-bold text-purple-950">Situação</h2>

@@ -61,6 +61,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true });
     }
 
+    if (pedidoAtual.stripeSessionId && pedidoAtual.stripeSessionId !== session.id) {
+        return NextResponse.json({ error: "Payment session mismatch." }, { status: 400 });
+    }
+
     const expectedAmount =
         typeof pedidoAtual.totalCentavos === "number" && pedidoAtual.totalCentavos > 0
             ? pedidoAtual.totalCentavos

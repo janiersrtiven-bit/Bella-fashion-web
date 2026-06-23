@@ -16,6 +16,13 @@ type Produto = {
   descricao?: string;
   dataCadastro?: string;
   horaCadastro?: string;
+  variantes?: Array<{
+    id: number;
+    tamanho: string;
+    cor: string;
+    estoque: number;
+    ativo: boolean;
+  }>;
 };
 
 function precoParaNumero(preco: string) {
@@ -322,6 +329,11 @@ export default function ProdutosAdminPage() {
                         >
                           {produto.estoque || 0} un.
                         </span>
+                        {(produto.variantes?.length || 0) > 0 && (
+                          <p className="mt-2 text-xs font-semibold text-purple-700">
+                            {produto.variantes?.length} variacoes
+                          </p>
+                        )}
                       </td>
 
                       <td className="px-6 py-4 font-bold text-purple-900">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { prisma } from "@/lib/db";
+import { getTrackingUrl } from "@/lib/shipping";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,7 @@ export default async function PedidoDetalhePage({ params }: PageProps) {
 
   const reorderHref = pedido.produto?.slug ? `/produto/${pedido.produto.slug}` : "/";
   const reorderLabel = pedido.produto?.slug ? "Comprar novamente" : "Continuar comprando";
+  const trackingUrl = getTrackingUrl(pedido.codigoRastreio);
 
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-8 text-gray-900 sm:px-6 lg:px-8">
@@ -153,6 +155,16 @@ export default async function PedidoDetalhePage({ params }: PageProps) {
               <div className="rounded-3xl bg-purple-50 p-6">
                 <p className="text-sm text-gray-500">Código de rastreio</p>
                 <p className="mt-2 text-gray-900">{pedido.codigoRastreio || "Ainda não disponível"}</p>
+                {trackingUrl ? (
+                  <a
+                    href={trackingUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-flex rounded-full bg-purple-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-purple-800"
+                  >
+                    Abrir rastreamento
+                  </a>
+                ) : null}
               </div>
 
               {pedido.observacoes ? (

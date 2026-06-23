@@ -4,6 +4,12 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ToastView, useToast } from "@/components/ui/toast";
+import {
+  ProductVariantsEditor,
+  getProductVariantsError,
+  normalizeProductVariants,
+  type ProdutoVarianteForm,
+} from "@/components/admin/product-variants-editor";
 import { toUserFacingError } from "@/lib/ui-error";
 import { isInvalidImageValue, uploadImageToServer } from "@/lib/upload-client";
 
@@ -49,6 +55,7 @@ export default function NovoProdutoPage() {
   const [status, setStatus] = useState("Ativo");
   const [descricao, setDescricao] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
+  const [variantes, setVariantes] = useState<ProdutoVarianteForm[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -97,7 +104,12 @@ export default function NovoProdutoPage() {
 
   async function handleSave() {
     const precoFormatado = formatarPreco(preco);
-    const estoqueNumero = Number(estoque);
+    const variantesPayload = normalizeProductVariants(variantes);
+    const variantesError = getProductVariantsError(variantesPayload);
+    const estoqueNumero =
+      variantesPayload.length > 0
+        ? variantesPayload.reduce((total, item) => total + item.estoque, 0)
+        : Number(estoque);
 
     if (!nome.trim()) {
       showToast("Preencha o nome do produto.", "error");
@@ -114,8 +126,13 @@ export default function NovoProdutoPage() {
       return;
     }
 
-    if (!Number.isInteger(estoqueNumero) || estoqueNumero < 0) {
+    if (!variantesPayload.length && (!Number.isInteger(estoqueNumero) || estoqueNumero < 0)) {
       showToast("Preencha um estoque válido. Exemplo: 10", "error");
+      return;
+    }
+
+    if (variantesError) {
+      showToast(variantesError, "error");
       return;
     }
 
@@ -166,6 +183,8 @@ export default function NovoProdutoPage() {
           categoria: novoProduto.categoria,
           estoque: novoProduto.estoque,
           descricao: novoProduto.descricao,
+          imagens: [novoProduto.imagem],
+          variantes: variantesPayload,
         }),
       });
 
@@ -276,6 +295,9 @@ export default function NovoProdutoPage() {
                 placeholder="Ex: 10"
                 className="w-full rounded-2xl border border-purple-100 px-4 py-3 outline-none transition focus:border-purple-700"
               />
+              <p className="mt-2 text-xs text-gray-500">
+                Se houver variacoes, o estoque sera calculado por tamanho/cor.
+              </p>
             </div>
 
             <div>
@@ -320,6 +342,11 @@ export default function NovoProdutoPage() {
                 className="w-full rounded-2xl border border-purple-100 px-4 py-3 outline-none transition focus:border-purple-700"
               />
             </div>
+
+            <ProductVariantsEditor
+              variantes={variantes}
+              onChange={setVariantes}
+            />
 
             <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-semibold text-purple-950">

@@ -21,6 +21,11 @@ type Pedido = {
   observacoes?: string;
   dataPedido: string;
   horaPedido: string;
+  itens?: Array<{
+    id: number;
+    nome: string;
+    quantidade: number;
+  }>;
 };
 
 function statusClasse(status: string) {
@@ -50,6 +55,7 @@ export default function PedidosAdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
   const { toast, showToast, clearToast } = useToast();
 
   useEffect(() => {
@@ -101,6 +107,34 @@ export default function PedidosAdminPage() {
     }
   }
 
+  async function handleQuickUpdate(pedido: Pedido, payload: Partial<Pedido>, successMessage: string) {
+    try {
+      setUpdatingId(pedido.id);
+      const response = await fetch(`/api/pedidos?id=${pedido.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        const message = data.error || "Não foi possível atualizar o pedido.";
+        setErrorMessage(message);
+        showToast(message, "error");
+        return;
+      }
+
+      setPedidos((current) => current.map((item) => (item.id === pedido.id ? data : item)));
+      showToast(successMessage, "success");
+    } catch {
+      const message = "No se pudo conectar con el servidor.";
+      setErrorMessage(message);
+      showToast(message, "error");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   const totalPedidos = pedidos.length;
 
   const totalAguardandoPagamento = pedidos.filter(
@@ -114,7 +148,10 @@ export default function PedidosAdminPage() {
   ).length;
 
   const totalEnviados = pedidos.filter(
-    (pedido) => (pedido.statusPedido || pedido.status) === "Enviado"
+    (pedido) =>
+      (pedido.statusPedido || pedido.status) === "Enviado" ||
+      pedido.statusEntrega === "Em transporte" ||
+      pedido.statusEntrega === "Saiu para entrega"
   ).length;
 
   const pedidosFiltrados = pedidos.filter((pedido) => {
@@ -302,8 +339,16 @@ export default function PedidosAdminPage() {
                           </a>
                         </td>
 
-                        <td className="px-6 py-4 font-semibold text-purple-950">
-                          {pedido.produtoNome}
+                        <td className="px-6 py-4 text-purple-950">
+                          <p className="font-semibold">{pedido.produtoNome}</p>
+                          {pedido.itens && pedido.itens.length > 0 ? (
+                            <div className="mt-2 space-y-1 text-xs text-gray-500">
+                              {pedido.itens.slice(0, 3).map((item) => (
+                                <p key={item.id}>{item.quantidade}x {item.nome}</p>
+                              ))}
+                              {pedido.itens.length > 3 ? <p>+ {pedido.itens.length - 3} itens</p> : null}
+                            </div>
+                          ) : null}
                         </td>
 
                         <td className="px-6 py-4 font-bold text-purple-900">
@@ -362,7 +407,50 @@ export default function PedidosAdminPage() {
                         </td>
 
                         <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleQuickUpdate(pedido, { statusPagamento: "Pago", statusPedido: "Pagamento confirmado" }, "Pagamento confirmado.")}
+                                disabled={updatingId === pedido.id || statusPagamentoAtual === "Pago"}
+                                className="rounded-full bg-green-100 px-3 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-200 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Pago
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleQuickUpdate(pedido, { statusPedido: "Em preparação" }, "Pedido em preparação.")}
+                                disabled={updatingId === pedido.id}
+                                className="rounded-full bg-purple-100 px-3 py-2 text-xs font-semibold text-purple-800 transition hover:bg-purple-200 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Preparar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleQuickUpdate(pedido, { statusPedido: "Enviado", statusEntrega: "Em transporte" }, "Pedido marcado como enviado.")}
+                                disabled={updatingId === pedido.id}
+                                className="rounded-full bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Enviado
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleQuickUpdate(pedido, { statusPedido: "Entregue", statusEntrega: "Entregue" }, "Pedido entregue.")}
+                                disabled={updatingId === pedido.id}
+                                className="rounded-full bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Entregue
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleQuickUpdate(pedido, { statusPedido: "Cancelado" }, "Pedido cancelado.")}
+                                disabled={updatingId === pedido.id}
+                                className="rounded-full bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                            <div className="flex justify-end gap-2">
                             <a
                               href={`/admin/pedidos/editar/${pedido.id}`}
                               className="rounded-full bg-purple-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-900"
@@ -378,6 +466,7 @@ export default function PedidosAdminPage() {
                             >
                               {deletingId === pedido.id ? "Eliminando..." : "Eliminar"}
                             </button>
+                            </div>
                           </div>
                         </td>
                       </tr>

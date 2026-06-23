@@ -134,6 +134,7 @@ export default function CheckoutPage() {
                     valorTotal: formatarMoeda(valorTotal),
                     metodoPagamento,
                     observacoes: observacoes.trim() || undefined,
+                    aceitouTermos: acceptedTerms,
                 }),
             });
 

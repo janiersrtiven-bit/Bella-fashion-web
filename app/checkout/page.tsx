@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "@/components/cart/cart-provider";
 
 function formatCurrency(value: number) {
@@ -16,6 +16,8 @@ function formatCurrency(value: number) {
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotalCents, hydrated, clearCart } = useCart();
+  const [freteCents, setFreteCents] = useState(0);
+  const [pixInstructions, setPixInstructions] = useState("");
   const [cliente, setCliente] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [emailCliente, setEmailCliente] = useState("");
@@ -26,7 +28,24 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    fetch("/api/configuracoes")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((config) => {
+        if (!config) return;
+        setFreteCents(Number(config.freteFixoCentavos || 0));
+        setPixInstructions(typeof config.instrucoesPix === "string" ? config.instrucoesPix : "");
+      })
+      .catch(() => {
+        setFreteCents(0);
+        setPixInstructions("");
+      });
+  }, []);
+
+  const totalCents = subtotalCents + freteCents;
   const subtotalDisplay = formatCurrency(subtotalCents / 100);
+  const freteDisplay = freteCents > 0 ? formatCurrency(freteCents / 100) : "A combinar";
+  const totalDisplay = formatCurrency(totalCents / 100);
 
   const whatsappLimpo = whatsapp.replace(/\D/g, "");
 
@@ -72,6 +91,7 @@ export default function CheckoutPage() {
       enderecoEntrega: enderecoEntrega.trim(),
       observacoes: observacoes.trim() || undefined,
       metodoPagamento,
+      aceitouTermos: acceptedTerms,
       itens: items.map((item) => ({
         produtoId: item.productId,
         varianteId: item.variantId,
@@ -101,6 +121,10 @@ export default function CheckoutPage() {
         return;
       }
 
+      sessionStorage.setItem(
+        "bella_order_access",
+        JSON.stringify({ id: data.id, whatsapp: whatsappLimpo })
+      );
       clearCart();
 
       if (metodoPagamento === "Cartão") {
@@ -310,14 +334,20 @@ export default function CheckoutPage() {
                   <p className="text-sm text-gray-500">Subtotal</p>
                   <p className="mt-2 text-3xl font-bold text-purple-950">{subtotalDisplay}</p>
                 </div>
-                <div className="rounded-3xl bg-purple-50 p-4">
+                  <div className="rounded-3xl bg-purple-50 p-4">
                   <p className="text-sm text-gray-500">Frete</p>
-                  <p className="mt-2 text-purple-950">Calculado no checkout</p>
+                  <p className="mt-2 text-purple-950">{freteDisplay}</p>
                 </div>
                 <div className="rounded-3xl bg-white p-4 shadow-sm">
-                  <p className="text-sm text-gray-500">Total parcial</p>
-                  <p className="mt-2 text-3xl font-bold text-purple-950">{subtotalDisplay}</p>
+                  <p className="text-sm text-gray-500">Total</p>
+                  <p className="mt-2 text-3xl font-bold text-purple-950">{totalDisplay}</p>
                 </div>
+                {metodoPagamento === "Pix" && pixInstructions ? (
+                  <div className="rounded-3xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+                    <p className="font-semibold">Instruções Pix</p>
+                    <p className="mt-2 whitespace-pre-line">{pixInstructions}</p>
+                  </div>
+                ) : null}
               </div>
             </aside>
           </div>

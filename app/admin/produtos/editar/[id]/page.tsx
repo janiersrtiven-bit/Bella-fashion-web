@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { ToastView, useToast } from "@/components/ui/toast";
+import {
+  ProductVariantsEditor,
+  getProductVariantsError,
+  normalizeProductVariants,
+  type ProdutoVarianteForm,
+} from "@/components/admin/product-variants-editor";
 import { toUserFacingError } from "@/lib/ui-error";
 import { isInvalidImageValue, uploadImageToServer } from "@/lib/upload-client";
 
@@ -19,6 +25,14 @@ type Produto = {
   descricao: string;
   dataCadastro?: string;
   horaCadastro?: string;
+  variantes?: Array<{
+    id?: number;
+    tamanho: string;
+    cor: string;
+    sku?: string | null;
+    estoque: number;
+    ativo: boolean;
+  }>;
 };
 
 function normalizeImagePath(value: string) {
@@ -71,6 +85,7 @@ export default function EditarProdutoPage() {
   const [status, setStatus] = useState("Ativo");
   const [descricao, setDescricao] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
+  const [variantes, setVariantes] = useState<ProdutoVarianteForm[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [produtoEncontrado, setProdutoEncontrado] = useState(false);
   const [dataCadastroOriginal, setDataCadastroOriginal] = useState("");
@@ -100,6 +115,15 @@ export default function EditarProdutoPage() {
         setImagemUrl(produto.imagem || "");
         setDataCadastroOriginal(produto.dataCadastro || "");
         setHoraCadastroOriginal(produto.horaCadastro || "");
+        setVariantes(
+          (produto.variantes || []).map((item) => ({
+            tamanho: item.tamanho || "",
+            cor: item.cor || "",
+            sku: item.sku || "",
+            estoque: String(item.estoque ?? ""),
+            ativo: item.ativo,
+          }))
+        );
       })
       .catch(() => {
         setProdutoEncontrado(false);
@@ -133,7 +157,12 @@ export default function EditarProdutoPage() {
 
   async function handleSave() {
     const precoFormatado = formatarPreco(preco);
-    const estoqueNumero = Number(estoque);
+    const variantesPayload = normalizeProductVariants(variantes);
+    const variantesError = getProductVariantsError(variantesPayload);
+    const estoqueNumero =
+      variantesPayload.length > 0
+        ? variantesPayload.reduce((total, item) => total + item.estoque, 0)
+        : Number(estoque);
 
     if (!nome.trim()) {
       showToast("Preencha o nome do produto.", "error");
@@ -150,8 +179,13 @@ export default function EditarProdutoPage() {
       return;
     }
 
-    if (!Number.isInteger(estoqueNumero) || estoqueNumero < 0) {
+    if (!variantesPayload.length && (!Number.isInteger(estoqueNumero) || estoqueNumero < 0)) {
       showToast("Preencha um estoque válido. Exemplo: 10", "error");
+      return;
+    }
+
+    if (variantesError) {
+      showToast(variantesError, "error");
       return;
     }
 
@@ -211,6 +245,8 @@ export default function EditarProdutoPage() {
           descricao: produtoAtualizado.descricao,
           dataCadastro: produtoAtualizado.dataCadastro,
           horaCadastro: produtoAtualizado.horaCadastro,
+          imagens: [produtoAtualizado.imagem],
+          variantes: variantesPayload,
         }),
       });
 
@@ -355,6 +391,9 @@ export default function EditarProdutoPage() {
                 placeholder="Ex: 10"
                 className="w-full rounded-2xl border border-purple-100 px-4 py-3 outline-none transition focus:border-purple-700"
               />
+              <p className="mt-2 text-xs text-gray-500">
+                Se houver variacoes, o estoque sera calculado por tamanho/cor.
+              </p>
             </div>
 
             <div>
@@ -398,6 +437,11 @@ export default function EditarProdutoPage() {
                 className="w-full rounded-2xl border border-purple-100 px-4 py-3 outline-none transition focus:border-purple-700"
               />
             </div>
+
+            <ProductVariantsEditor
+              variantes={variantes}
+              onChange={setVariantes}
+            />
 
             <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-semibold text-purple-950">
