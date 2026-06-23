@@ -29,11 +29,6 @@ export const metadata: Metadata = {
     images: ["/opengraph-image"],
   },
   robots: { index: true, follow: true },
-  verification: {
-    other: {
-      "facebook-domain-verification": "ohkp2qfh5uk2Bi9menmwpadraf8tne",
-    },
-  },
 };
 
 export default function RootLayout({
