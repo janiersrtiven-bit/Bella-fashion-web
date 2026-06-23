@@ -41,8 +41,8 @@ export async function POST(request: Request) {
     const pedidoId = Number(payload.pedidoId);
     const cancelPath =
         typeof payload.cancelPath === "string" &&
-        payload.cancelPath.startsWith("/") &&
-        !payload.cancelPath.startsWith("//")
+            payload.cancelPath.startsWith("/") &&
+            !payload.cancelPath.startsWith("//")
             ? payload.cancelPath
             : "/";
 
@@ -81,23 +81,23 @@ export async function POST(request: Request) {
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
         pedido.itens && pedido.itens.length > 0
             ? pedido.itens.map((item) => ({
-                  price_data: {
-                      currency: "brl",
-                      product_data: { name: item.nome },
-                      unit_amount: item.precoUnitarioCentavos,
-                  },
-                  quantity: item.quantidade,
-              }))
+                price_data: {
+                    currency: "brl",
+                    product_data: { name: item.nome },
+                    unit_amount: item.precoUnitarioCentavos,
+                },
+                quantity: item.quantidade,
+            }))
             : [
-                  {
-                      price_data: {
-                          currency: "brl",
-                          product_data: { name: pedido.produtoNome },
-                          unit_amount: amountInCents,
-                      },
-                      quantity: 1,
-                  },
-              ];
+                {
+                    price_data: {
+                        currency: "brl",
+                        product_data: { name: pedido.produtoNome },
+                        unit_amount: amountInCents,
+                    },
+                    quantity: 1,
+                },
+            ];
 
     const lineItemsSubtotalInCents = lineItems.reduce((total, item) => {
         const unitAmount =
