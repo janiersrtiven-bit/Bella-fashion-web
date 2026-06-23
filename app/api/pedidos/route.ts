@@ -163,6 +163,18 @@ export async function POST(request: Request) {
             ...(currentCustomer ? { clienteId: currentCustomer.id } : {}),
         };
 
+        const statusPagamentoValue = isAdmin
+            ? validatedPedido.statusPagamento
+            : "Aguardando pagamento";
+        const statusPedidoValue = isAdmin ? validatedPedido.statusPedido : "Pedido recebido";
+        const shouldReserveStock = statusPagamentoValue !== "Pago";
+        const pedidoReservationData = {
+            statusPagamento: statusPagamentoValue,
+            statusPedido: statusPedidoValue,
+            estoqueReservado: shouldReserveStock,
+            expiresAt: !isAdmin && shouldReserveStock ? new Date(Date.now() + 60 * 60 * 1000) : null,
+        };
+
         const pedido = await prisma.$transaction(async (tx) => {
             const isMultiItemOrder = Array.isArray(validatedPedido.itens) && validatedPedido.itens.length > 0;
 
@@ -209,10 +221,7 @@ export async function POST(request: Request) {
                             (produto.precoCentavos ?? Math.round(parsePriceToNumber(produto.preco) * 100)) *
                             (validatedPedido.quantidade ?? 0),
                         metodoPagamento: validatedPedido.metodoPagamento,
-                        statusPagamento: isAdmin
-                            ? validatedPedido.statusPagamento
-                            : "Aguardando pagamento",
-                        statusPedido: isAdmin ? validatedPedido.statusPedido : "Pedido recebido",
+                        ...pedidoReservationData,
                         statusEntrega: isAdmin
                             ? validatedPedido.statusEntrega
                             : "Aguardando envio",
@@ -333,10 +342,7 @@ export async function POST(request: Request) {
                     freteCentavos,
                     totalCentavos,
                     metodoPagamento: validatedPedido.metodoPagamento,
-                    statusPagamento: isAdmin
-                        ? validatedPedido.statusPagamento
-                        : "Aguardando pagamento",
-                    statusPedido: isAdmin ? validatedPedido.statusPedido : "Pedido recebido",
+                    ...pedidoReservationData,
                     statusEntrega: isAdmin
                         ? validatedPedido.statusEntrega
                         : "Aguardando envio",

@@ -47,6 +47,10 @@ export async function POST(request: Request) {
 
     const session = event.data.object as Stripe.Checkout.Session;
     const pedidoId = Number(session.metadata?.pedidoId);
+    const paymentIntentId =
+        typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id;
 
     if (!Number.isInteger(pedidoId) || pedidoId <= 0 || session.payment_status !== "paid") {
         return NextResponse.json({ received: true });
@@ -74,6 +78,10 @@ export async function POST(request: Request) {
         data: {
             statusPagamento: "Pago",
             statusPedido: "Pagamento confirmado",
+            estoqueReservado: false,
+            expiresAt: null,
+            stripeSessionId: session.id,
+            ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
         },
     });
 

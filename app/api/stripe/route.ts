@@ -126,6 +126,13 @@ export async function POST(request: Request) {
             );
         }
 
+        if (session.id) {
+            await prisma.pedido.update({
+                where: { id: pedido.id },
+                data: { stripeSessionId: session.id },
+            });
+        }
+
         return NextResponse.json({ url: session.url });
     } catch {
         return NextResponse.json(
